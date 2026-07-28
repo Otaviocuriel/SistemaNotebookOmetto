@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import NovoPedido from "../pages/NovoPedido";
 import Login from "../pages/Login";
@@ -9,24 +9,91 @@ import Notebooks from "../pages/Notebooks";
 import Relatorios from "../pages/Relatorios";
 import MeusPedidos from "../pages/MeusPedidos";
 import Configuracoes from "../pages/Configuracoes";
+import Cadastro from "../pages/Cadastro";
 
+import PrivateRoute from "./PrivateRoute";
 
 export function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
-
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/pedidos" element={<Pedidos />} />
-        <Route path="/professores" element={<Professores />} />
-        <Route path="/notebooks" element={<Notebooks />} />
-        <Route path="/relatorios" element={<Relatorios />} />
-        <Route path="/novo-pedido" element={<NovoPedido />} />
-        <Route path="/meus-pedidos" element={<MeusPedidos />} />
-        <Route path="/relatorios" element={<Relatorios />} />
-        <Route path="/configuracoes" element={<Configuracoes />} />
+
+        <Route path="/cadastro" element={<Cadastro />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/pedidos"
+          element={
+            <PrivateRoute>
+              <Pedidos />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/novo-pedido"
+          element={
+            <PrivateRoute>
+              <NovoPedido />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/meus-pedidos"
+          element={
+            <PrivateRoute>
+              <MeusPedidos />
+            </PrivateRoute>
+          }
+        />
+
+        {/* SOMENTE ADMIN */}
+
+        <Route
+          path="/professores"
+          element={
+            <PrivateRoute admin>
+              <Professores />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/notebooks"
+          element={
+            <PrivateRoute admin>
+              <Notebooks />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/relatorios"
+          element={
+            <PrivateRoute admin>
+              <Relatorios />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/configuracoes"
+          element={
+            <PrivateRoute admin>
+              <Configuracoes />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

@@ -6,21 +6,37 @@ import "./index.css";
 
 import { NotebookProvider } from "./context/NotebookContext";
 import { PedidoProvider } from "./context/PedidoContext";
+import { AuthProvider } from "./context/AuthContext";
+
 
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(
+
   <React.StrictMode>
 
-    <NotebookProvider>
 
-      <PedidoProvider>
+    <AuthProvider>
 
-        <App />
 
-      </PedidoProvider>
+      <NotebookProvider>
 
-    </NotebookProvider>
+
+        <PedidoProvider>
+
+
+          <App />
+
+
+        </PedidoProvider>
+
+
+      </NotebookProvider>
+
+
+    </AuthProvider>
+
 
   </React.StrictMode>
+
 );
