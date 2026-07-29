@@ -12,6 +12,7 @@ type Tema = "claro" | "escuro";
 interface ThemeContextValue {
   tema: Tema;
   alternarTema: () => void;
+  definirTema: (tema: Tema) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -42,6 +43,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       tema,
+      definirTema: setTema,
       alternarTema: () =>
         setTema((atual) => (atual === "claro" ? "escuro" : "claro")),
     }),
@@ -63,3 +65,4 @@ export function useTheme() {
 
   return context;
 }
+
