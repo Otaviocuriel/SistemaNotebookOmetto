@@ -33,7 +33,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <form onSubmit={entrar} className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md space-y-5">
+      <form onSubmit={entrar} className="w-full max-w-md space-y-5 rounded-2xl bg-white p-5 shadow-md sm:p-8">
         <div className="text-center">
           <img
             src="/logo-ometto.svg"
