@@ -8,9 +8,17 @@ import {
   listarProfessores,
   listarSolicitacoesCadastro,
   recusarProfessor,
+  alterarMinhaSenha,
 } from "../controllers/usuarioController.js";
+import { createRateLimiter } from "../middlewares/securityMiddleware.js";
 
 const router = Router();
+const senhaLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: "Muitas tentativas. Aguarde uma hora para alterar a senha.",
+});
+router.patch("/me/senha", authMiddleware, senhaLimiter, alterarMinhaSenha);
 router.get("/solicitacoes", authMiddleware, adminMiddleware, listarSolicitacoesCadastro);
 router.patch("/solicitacoes/:id/aprovar", authMiddleware, adminMiddleware, aprovarProfessor);
 router.delete("/solicitacoes/:id", authMiddleware, adminMiddleware, recusarProfessor);
@@ -18,4 +26,5 @@ router.get("/professores", authMiddleware, adminMiddleware, listarProfessores);
 router.put("/professores/:id", authMiddleware, adminMiddleware, editarProfessor);
 router.delete("/professores/:id", authMiddleware, adminMiddleware, excluirProfessor);
 export default router;
+
 
