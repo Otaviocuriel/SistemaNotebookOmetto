@@ -11,6 +11,7 @@ const professorSchema = z.object({
 
 export async function listarProfessores(_req: Request, res: Response) {
   const professores = await prisma.professor.findMany({
+    where: { usuario: { statusCadastro: "APROVADO" } },
     include: {
       usuario: {
         select: { id: true, nome: true, email: true, createdAt: true },
@@ -19,6 +20,66 @@ export async function listarProfessores(_req: Request, res: Response) {
     orderBy: { usuario: { nome: "asc" } },
   });
   return res.json(professores);
+}
+
+export async function listarSolicitacoesCadastro(_req: Request, res: Response) {
+  const solicitacoes = await prisma.professor.findMany({
+    where: { usuario: { statusCadastro: "PENDENTE" } },
+    include: {
+      usuario: {
+        select: { id: true, nome: true, email: true, createdAt: true },
+      },
+    },
+    orderBy: { usuario: { createdAt: "asc" } },
+  });
+
+  return res.json(solicitacoes);
+}
+
+export async function aprovarProfessor(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ message: "Solicitação inválida." });
+  }
+
+  const professor = await prisma.professor.findUnique({
+    where: { id },
+    include: { usuario: true },
+  });
+
+  if (!professor || professor.usuario.statusCadastro !== "PENDENTE") {
+    return res.status(404).json({ message: "Solicitação pendente não encontrada." });
+  }
+
+  await prisma.usuario.update({
+    where: { id: professor.usuarioId },
+    data: { statusCadastro: "APROVADO" },
+  });
+
+  return res.json({ message: "Professor aprovado com sucesso." });
+}
+
+export async function recusarProfessor(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ message: "Solicitação inválida." });
+  }
+
+  const professor = await prisma.professor.findUnique({
+    where: { id },
+    include: { usuario: true },
+  });
+
+  if (!professor || professor.usuario.statusCadastro !== "PENDENTE") {
+    return res.status(404).json({ message: "Solicitação pendente não encontrada." });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.professor.delete({ where: { id } });
+    await tx.usuario.delete({ where: { id: professor.usuarioId } });
+  });
+
+  return res.status(204).send();
 }
 
 export async function editarProfessor(req: Request, res: Response) {
