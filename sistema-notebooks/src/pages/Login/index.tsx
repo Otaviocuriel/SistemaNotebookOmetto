@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { api, mensagemErro } from "../../services/api";
 import { useAuth, type Usuario } from "../../context/AuthContext";
+import ThemeToggle from "../../components/ui/ThemeToggle";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -32,7 +33,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+    <div className="relative min-h-screen flex items-center justify-center bg-slate-100 px-4">
+      <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+        <ThemeToggle />
+      </div>
+
       <form onSubmit={entrar} className="w-full max-w-md space-y-5 rounded-2xl bg-white p-5 shadow-md sm:p-8">
         <div className="text-center">
           <img
@@ -60,4 +65,3 @@ export default function Login() {
     </div>
   );
 }
-
