@@ -8,6 +8,7 @@ import {
   PlusCircle,
   History,
   X,
+  LogOut,
 } from "lucide-react";
 import MenuItem from "./MenuItem";
 import { useAuth } from "../../context/AuthContext";
@@ -15,26 +16,27 @@ import { useAuth } from "../../context/AuthContext";
 interface SidebarProps {
   aberto: boolean;
   onClose: () => void;
+  onLogout: () => void;
 }
 
-export default function Sidebar({ aberto, onClose }: SidebarProps) {
+export default function Sidebar({ aberto, onClose, onLogout }: SidebarProps) {
   const { usuario } = useAuth();
   const admin = usuario?.tipo === "ADMIN";
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex min-h-screen w-72 flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
+      className={`fixed inset-y-0 left-0 z-40 flex min-h-screen w-[280px] flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
         aberto ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="flex items-center gap-3 border-b p-5">
+      <div className="flex items-center gap-3 border-b px-5 py-4">
         <img
           src="/logo-ometto.svg"
           alt="E.E. José Ometto"
-          className="h-14 w-14 rounded-full border border-slate-200 object-cover"
+          className="h-12 w-12 rounded-full border border-slate-200 object-cover"
         />
         <div>
-          <h1 className="text-xl font-bold leading-tight text-blue-700">
+          <h1 className="text-lg font-bold leading-tight text-slate-900">
             Notebook Ometto
           </h1>
           <p className="mt-1 text-xs text-slate-500">
@@ -51,7 +53,7 @@ export default function Sidebar({ aberto, onClose }: SidebarProps) {
         </button>
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto p-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
         <MenuItem to="/dashboard" label="Dashboard" icon={House} onClick={onClose} />
 
         {!admin && (
@@ -79,12 +81,19 @@ export default function Sidebar({ aberto, onClose }: SidebarProps) {
         )}
       </nav>
 
-      <div className="border-t p-4 text-center text-sm text-slate-500">
-        Sistema Notebook Ometto
-        <br />
-        v1.0.0
+      <div className="border-t border-slate-200 p-3">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-red-50 hover:text-red-700"
+        >
+          <LogOut size={18} />
+          Sair da conta
+        </button>
+        <p className="mt-2 px-3 text-xs text-slate-400">Versão 1.1.0</p>
       </div>
     </aside>
   );
 }
+
 
