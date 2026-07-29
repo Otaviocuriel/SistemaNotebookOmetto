@@ -70,6 +70,45 @@ export async function receberPedido(req: Request, res: Response) {
   return alterarStatusComEstoque(req, res, "FINALIZADO");
 }
 
+export async function solicitarRetirada(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ message: "Pedido inválido." });
+  }
+
+  try {
+    const professor = await prisma.professor.findUnique({
+      where: { usuarioId: req.usuario!.id },
+    });
+    if (!professor) {
+      return res.status(403).json({
+        message: "Apenas o professor responsável pode solicitar a retirada.",
+      });
+    }
+
+    const pedido = await prisma.pedido.findFirst({
+      where: { id, professorId: professor.id },
+    });
+    if (!pedido) {
+      return res.status(404).json({ message: "Pedido não encontrado." });
+    }
+    if (pedido.status !== "EM_USO") {
+      return res.status(400).json({
+        message: "A retirada só pode ser solicitada para notebooks em uso.",
+      });
+    }
+
+    const atualizado = await prisma.pedido.update({
+      where: { id },
+      data: { status: "RETIRADA_SOLICITADA" },
+    });
+    return res.json(atualizado);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erro ao solicitar a retirada." });
+  }
+}
+
 async function alterarStatusComEstoque(
   req: Request,
   res: Response,
@@ -104,7 +143,9 @@ async function alterarStatusComEstoque(
           },
         });
       } else {
-        if (pedido.status !== "EM_USO") throw new Error("STATUS_INVALIDO");
+        if (pedido.status !== "RETIRADA_SOLICITADA") {
+          throw new Error("RETIRADA_NAO_SOLICITADA");
+        }
         await tx.notebook.update({
           where: { categoria: pedido.professor.categoria },
           data: {
@@ -123,6 +164,7 @@ async function alterarStatusComEstoque(
   } catch (error) {
     const key = error instanceof Error ? error.message : "";
     const messages: Record<string, string> = {
+      RETIRADA_NAO_SOLICITADA: "O professor ainda não solicitou a retirada.",
       PEDIDO_NAO_ENCONTRADO: "Pedido não encontrado.",
       STATUS_INVALIDO: "O pedido não pode mudar para esse status.",
       ESTOQUE_INSUFICIENTE: "Não há notebooks suficientes disponíveis.",
@@ -132,3 +174,4 @@ async function alterarStatusComEstoque(
     return res.status(500).json({ message: "Erro ao atualizar pedido." });
   }
 }
+
