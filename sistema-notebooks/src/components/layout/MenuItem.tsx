@@ -5,12 +5,14 @@ interface MenuItemProps {
   to: string;
   label: string;
   icon: LucideIcon;
+  onClick?: () => void;
 }
 
 export default function MenuItem({
   to,
   label,
   icon: Icon,
+  onClick,
 }: MenuItemProps) {
   const location = useLocation();
 
@@ -19,6 +21,7 @@ export default function MenuItem({
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={`flex items-center gap-3 rounded-xl px-4 py-3 transition
       ${
         active
@@ -31,3 +34,4 @@ export default function MenuItem({
     </Link>
   );
 }
+
