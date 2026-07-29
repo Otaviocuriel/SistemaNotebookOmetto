@@ -19,6 +19,11 @@ const envSchema = z.object({
   OTAVIO_ADMIN_PASSWORD: z.string().min(8).optional(),
   GABRIEL_ADMIN_EMAIL: z.email().optional(),
   GABRIEL_ADMIN_PASSWORD: z.string().min(8).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  NOTIFICATION_EMAILS: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().min(1).default("Sistema Notebook Ometto <onboarding@resend.dev>"),
+  FRONTEND_URL: z.url().optional(),
 });
 
 export const env = envSchema.parse(process.env);
+
