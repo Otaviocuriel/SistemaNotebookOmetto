@@ -1,232 +1,82 @@
+import { useEffect, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
-import { usePedidos } from "../../context/PedidoContext";
-import { useNotebook } from "../../context/NotebookContext";
+import { api, mensagemErro } from "../../services/api";
+
+interface PedidoApi {
+  id: number;
+  sala: string;
+  quantidade: number;
+  status: "PENDENTE" | "EM_USO" | "FINALIZADO";
+  createdAt: string;
+  professor: {
+    categoria: "INICIAIS" | "FINAIS";
+    usuario: { nome: string; email: string };
+  };
+}
+
+const statusLabel = { PENDENTE: "Pendente", EM_USO: "Em uso", FINALIZADO: "Finalizado" };
 
 export default function Pedidos() {
+  const [pedidos, setPedidos] = useState<PedidoApi[]>([]);
+  const [erro, setErro] = useState("");
 
-  const { pedidos, setPedidos } = usePedidos();
-
-  const {
-    entregarNotebook,
-    receberNotebook,
-  } = useNotebook();
-
-
-  function alterarStatus(
-    id: number,
-    novoStatus: "Em uso" | "Finalizado"
-  ) {
-
-    const pedido = pedidos.find(
-      (item) => item.id === id
-    );
-
-
-    if (!pedido) return;
-
-
-    if (novoStatus === "Em uso") {
-
-      entregarNotebook(
-        pedido.categoria,
-        pedido.quantidade
-      );
-
+  async function carregar() {
+    try {
+      const { data } = await api.get<PedidoApi[]>("/pedidos");
+      setPedidos(data);
+    } catch (error) {
+      setErro(mensagemErro(error));
     }
-
-
-    if (novoStatus === "Finalizado") {
-
-      receberNotebook(
-        pedido.categoria,
-        pedido.quantidade
-      );
-
-    }
-
-
-    setPedidos((atual) =>
-      atual.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: novoStatus,
-            }
-          : item
-      )
-    );
-
   }
 
+  useEffect(() => {
+    api.get<PedidoApi[]>("/pedidos")
+      .then(({ data }) => setPedidos(data))
+      .catch((error) => setErro(mensagemErro(error)));
+  }, []);
 
-  function corStatus(status: string) {
-
-    if (status === "Pendente") {
-      return "bg-yellow-100 text-yellow-700";
+  async function alterar(id: number, acao: "entregar" | "receber") {
+    setErro("");
+    try {
+      await api.patch(`/pedidos/${id}/${acao}`);
+      await carregar();
+    } catch (error) {
+      setErro(mensagemErro(error));
     }
-
-    if (status === "Em uso") {
-      return "bg-blue-100 text-blue-700";
-    }
-
-    return "bg-green-100 text-green-700";
-
   }
-
 
   return (
     <AdminLayout>
-
       <div className="space-y-6">
-
-        <div>
-          <h1 className="text-3xl font-bold">
-            Pedidos
-          </h1>
-
-          <p className="text-slate-500">
-            Controle de entrega e devolução dos notebooks.
-          </p>
-        </div>
-
-
-        <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-
-          <table className="w-full">
-
-            <thead className="bg-slate-100">
-
-              <tr>
-
-                <th className="p-4 text-left">
-                  Professor
-                </th>
-
-                <th className="p-4 text-left">
-                  Sala
-                </th>
-
-                <th className="p-4 text-left">
-                  Quantidade
-                </th>
-
-                <th className="p-4 text-left">
-                  Categoria
-                </th>
-
-                <th className="p-4 text-left">
-                  Status
-                </th>
-
-                <th className="p-4 text-center">
-                  Ação
-                </th>
-
-              </tr>
-
-            </thead>
-
-
+        <div><h1 className="text-3xl font-bold">Pedidos</h1>
+          <p className="text-slate-500">Controle de entrega e devolução dos notebooks.</p></div>
+        {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
+        <div className="bg-white rounded-2xl border shadow-sm overflow-x-auto">
+          <table className="w-full min-w-[760px]">
+            <thead className="bg-slate-100"><tr>
+              {["Professor", "Sala", "Quantidade", "Categoria", "Status", "Ação"].map((x) =>
+                <th key={x} className="p-4 text-left">{x}</th>)}
+            </tr></thead>
             <tbody>
-
               {pedidos.map((pedido) => (
-
-                <tr
-                  key={pedido.id}
-                  className="border-t"
-                >
-
+                <tr key={pedido.id} className="border-t">
+                  <td className="p-4">{pedido.professor.usuario.nome}</td>
+                  <td className="p-4">{pedido.sala}</td>
+                  <td className="p-4">{pedido.quantidade}</td>
+                  <td className="p-4">{pedido.professor.categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais"}</td>
+                  <td className="p-4">{statusLabel[pedido.status]}</td>
                   <td className="p-4">
-                    {pedido.professor}
+                    {pedido.status === "PENDENTE" && <button onClick={() => alterar(pedido.id, "entregar")} className="bg-blue-600 text-white px-4 py-2 rounded-lg">Entregar</button>}
+                    {pedido.status === "EM_USO" && <button onClick={() => alterar(pedido.id, "receber")} className="bg-green-600 text-white px-4 py-2 rounded-lg">Receber</button>}
+                    {pedido.status === "FINALIZADO" && <span className="text-slate-400">Concluído</span>}
                   </td>
-
-
-                  <td className="p-4">
-                    {pedido.sala}
-                  </td>
-
-
-                  <td className="p-4">
-                    {pedido.quantidade}
-                  </td>
-
-
-                  <td className="p-4">
-                    {pedido.categoria}
-                  </td>
-
-
-                  <td className="p-4">
-
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-semibold ${corStatus(
-                        pedido.status
-                      )}`}
-                    >
-                      {pedido.status}
-                    </span>
-
-                  </td>
-
-
-                  <td className="p-4 text-center">
-
-                    {pedido.status === "Pendente" && (
-
-                      <button
-                        onClick={() =>
-                          alterarStatus(
-                            pedido.id,
-                            "Em uso"
-                          )
-                        }
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                      >
-                        Entregar
-                      </button>
-
-                    )}
-
-
-                    {pedido.status === "Em uso" && (
-
-                      <button
-                        onClick={() =>
-                          alterarStatus(
-                            pedido.id,
-                            "Finalizado"
-                          )
-                        }
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-                      >
-                        Receber
-                      </button>
-
-                    )}
-
-
-                    {pedido.status === "Finalizado" && (
-
-                      <span className="text-slate-400">
-                        Concluído
-                      </span>
-
-                    )}
-
-                  </td>
-
                 </tr>
-
               ))}
-
+              {!pedidos.length && <tr><td colSpan={6} className="p-8 text-center text-slate-500">Nenhum pedido encontrado.</td></tr>}
             </tbody>
-
           </table>
-
         </div>
-
       </div>
-
     </AdminLayout>
   );
 }

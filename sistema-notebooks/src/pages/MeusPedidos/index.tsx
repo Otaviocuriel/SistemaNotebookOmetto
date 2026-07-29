@@ -1,112 +1,40 @@
+import { useEffect, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
+import { api, mensagemErro } from "../../services/api";
 
-const pedidos = [
-  {
-    id: 1,
-    sala: "7º A",
-    quantidade: 20,
-    status: "Pendente",
-    data: "28/07/2026",
-  },
-  {
-    id: 2,
-    sala: "8º B",
-    quantidade: 25,
-    status: "Em uso",
-    data: "28/07/2026",
-  },
-  {
-    id: 3,
-    sala: "5º C",
-    quantidade: 18,
-    status: "Finalizado",
-    data: "27/07/2026",
-  },
-];
-
-function corStatus(status: string) {
-  switch (status) {
-    case "Pendente":
-      return "bg-yellow-100 text-yellow-700";
-
-    case "Em uso":
-      return "bg-blue-100 text-blue-700";
-
-    case "Finalizado":
-      return "bg-green-100 text-green-700";
-
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
+interface Pedido {
+  id: number; sala: string; quantidade: number;
+  status: "PENDENTE" | "EM_USO" | "FINALIZADO"; createdAt: string;
 }
+const labels = { PENDENTE: "Pendente", EM_USO: "Em uso", FINALIZADO: "Finalizado" };
 
 export default function MeusPedidos() {
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [erro, setErro] = useState("");
+  useEffect(() => {
+    api.get<Pedido[]>("/pedidos").then(({ data }) => setPedidos(data))
+      .catch((error) => setErro(mensagemErro(error)));
+  }, []);
   return (
     <AdminLayout>
       <div className="space-y-6">
-
-        <h1 className="text-3xl font-bold">
-          Meus Pedidos
-        </h1>
-
+        <h1 className="text-3xl font-bold">Meus Pedidos</h1>
+        {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-
           <table className="w-full">
-
-            <thead className="bg-slate-100">
-
-              <tr>
-                <th className="text-left p-4">Data</th>
-                <th className="text-left p-4">Sala</th>
-                <th className="text-left p-4">Quantidade</th>
-                <th className="text-left p-4">Status</th>
-              </tr>
-
-            </thead>
-
+            <thead className="bg-slate-100"><tr>
+              {["Data", "Sala", "Quantidade", "Status"].map((x) => <th key={x} className="text-left p-4">{x}</th>)}
+            </tr></thead>
             <tbody>
-
-              {pedidos.map((pedido) => (
-
-                <tr
-                  key={pedido.id}
-                  className="border-t hover:bg-slate-50"
-                >
-
-                  <td className="p-4">
-                    {pedido.data}
-                  </td>
-
-                  <td className="p-4">
-                    {pedido.sala}
-                  </td>
-
-                  <td className="p-4">
-                    {pedido.quantidade}
-                  </td>
-
-                  <td className="p-4">
-
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${corStatus(
-                        pedido.status
-                      )}`}
-                    >
-                      {pedido.status}
-                    </span>
-
-                  </td>
-
-                </tr>
-
-              ))}
-
+              {pedidos.map((pedido) => <tr key={pedido.id} className="border-t">
+                <td className="p-4">{new Date(pedido.createdAt).toLocaleString("pt-BR")}</td>
+                <td className="p-4">{pedido.sala}</td><td className="p-4">{pedido.quantidade}</td>
+                <td className="p-4">{labels[pedido.status]}</td>
+              </tr>)}
+              {!pedidos.length && <tr><td colSpan={4} className="p-8 text-center text-slate-500">Você ainda não fez pedidos.</td></tr>}
             </tbody>
-
           </table>
-
         </div>
-
       </div>
     </AdminLayout>
   );

@@ -1,76 +1,56 @@
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm, useWatch } from "react-hook-form";
+import { api, mensagemErro } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
-interface PedidoFormData {
-  sala: string;
-  quantidade: number;
-  observacao: string;
-}
+interface PedidoFormData { sala: string; quantidade: number; }
+interface Estoque { categoria: "INICIAIS" | "FINAIS"; disponivel: number; }
 
 export default function PedidoForm() {
-  const { register, handleSubmit, reset } = useForm<PedidoFormData>();
+  const { usuario } = useAuth();
+  const navigate = useNavigate();
+  const { register, handleSubmit, control } = useForm<PedidoFormData>();
+  const [estoque, setEstoque] = useState<Estoque | null>(null);
+  const [erro, setErro] = useState("");
+  const quantidade = Number(useWatch({ control, name: "quantidade" })) || 0;
 
-  function onSubmit(data: PedidoFormData) {
-    console.log(data);
+  useEffect(() => {
+    api.get<Estoque[]>("/notebooks")
+      .then(({ data }) => setEstoque(data.find((item) => item.categoria === usuario?.categoria) ?? null))
+      .catch((error) => setErro(mensagemErro(error)));
+  }, [usuario?.categoria]);
 
-    alert("Pedido enviado com sucesso!");
+  async function onSubmit(data: PedidoFormData) {
+    setErro("");
+    try {
+      await api.post("/pedidos", { sala: data.sala, quantidade: Number(data.quantidade) });
+      navigate("/meus-pedidos");
+    } catch (error) {
+      setErro(mensagemErro(error));
+    }
+  }
 
-    reset();
+  if (usuario?.tipo === "ADMIN") {
+    return <p className="text-slate-600">Pedidos são criados por contas de professor.</p>;
   }
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-5"
-    >
-      <div>
-        <label className="block mb-2 font-medium">
-          Sala
-        </label>
-
-        <input
-          {...register("sala")}
-          className="w-full border rounded-lg px-4 py-3"
-          placeholder="Ex.: 7º A"
-        />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="rounded-lg border bg-blue-50 p-4">
+        <strong>{usuario?.categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais"}</strong>
+        <p className="text-sm text-slate-600">Disponíveis: {estoque?.disponivel ?? 0}</p>
       </div>
-
-      <div>
-        <label className="block mb-2 font-medium">
-          Quantidade de notebooks
-        </label>
-
-        <input
-          type="number"
-          {...register("quantidade")}
-          className="w-full border rounded-lg px-4 py-3"
-        />
-      </div>
-
-      <div className="bg-blue-50 rounded-lg p-4">
-        <p className="text-blue-700 font-semibold">
-          Notebooks disponíveis
-        </p>
-
-        <h2 className="text-3xl font-bold text-blue-700">
-          28
-        </h2>
-      </div>
-
-      <div>
-        <label className="block mb-2 font-medium">
-          Observação
-        </label>
-
-        <textarea
-          {...register("observacao")}
-          rows={4}
-          className="w-full border rounded-lg px-4 py-3"
-        />
-      </div>
-
-      <button
-        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
-      >
+      {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
+      <input required {...register("sala")} className="w-full border rounded-lg px-4 py-3" placeholder="Sala (ex.: 7º A)" />
+      <input required type="number" min={1} max={estoque?.disponivel ?? 0}
+        {...register("quantidade", { valueAsNumber: true })}
+        className="w-full border rounded-lg px-4 py-3" placeholder="Quantidade" />
+      {estoque && quantidade > estoque.disponivel && (
+        <p className="rounded-lg bg-red-50 p-3 text-red-700">Quantidade maior que o estoque disponível.</p>
+      )}
+      <button disabled={!estoque || quantidade < 1 || quantidade > estoque.disponivel}
+        className="w-full bg-blue-600 disabled:bg-slate-400 text-white py-3 rounded-lg hover:bg-blue-700">
         Enviar Pedido
       </button>
     </form>
