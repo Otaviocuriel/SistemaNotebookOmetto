@@ -9,7 +9,12 @@ import { notificarNovoCadastro } from "../services/notificacaoEmailService.js";
 const cadastroSchema = z.object({
   nome: z.string().trim().min(3),
   email: z.email().transform((value) => value.toLowerCase()),
-  senha: z.string().min(6),
+  senha: z
+    .string()
+    .min(10, "A senha deve ter pelo menos 10 caracteres")
+    .max(72, "A senha deve ter no máximo 72 caracteres")
+    .regex(/[A-Za-zÀ-ÿ]/, "A senha deve conter pelo menos uma letra")
+    .regex(/[0-9]/, "A senha deve conter pelo menos um número"),
   categoria: z.enum(["INICIAIS", "FINAIS"]),
 });
 
@@ -115,4 +120,5 @@ export async function login(req: Request, res: Response) {
     return res.status(500).json({ message: "Erro no login" });
   }
 }
+
 
