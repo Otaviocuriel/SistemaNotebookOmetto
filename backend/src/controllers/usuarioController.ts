@@ -42,7 +42,7 @@ export async function editarProfessor(req: Request, res: Response) {
       const pedidosAbertos = await prisma.pedido.count({
         where: {
           professorId: id,
-          status: { in: ["PENDENTE", "EM_USO"] },
+          status: { in: ["PENDENTE", "EM_USO", "RETIRADA_SOLICITADA"] },
         },
       });
 
@@ -101,7 +101,7 @@ export async function excluirProfessor(req: Request, res: Response) {
     const pedidosAbertos = await prisma.pedido.count({
       where: {
         professorId: id,
-        status: { in: ["PENDENTE", "EM_USO"] },
+        status: { in: ["PENDENTE", "EM_USO", "RETIRADA_SOLICITADA"] },
       },
     });
 
@@ -123,3 +123,4 @@ export async function excluirProfessor(req: Request, res: Response) {
     return res.status(500).json({ message: "Erro ao excluir professor." });
   }
 }
+
