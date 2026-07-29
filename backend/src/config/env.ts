@@ -15,6 +15,10 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(3333),
+  OTAVIO_ADMIN_EMAIL: z.email().optional(),
+  OTAVIO_ADMIN_PASSWORD: z.string().min(8).optional(),
+  GABRIEL_ADMIN_EMAIL: z.email().optional(),
+  GABRIEL_ADMIN_PASSWORD: z.string().min(8).optional(),
 });
 
 export const env = envSchema.parse(process.env);

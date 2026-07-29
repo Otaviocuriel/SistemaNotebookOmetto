@@ -1,120 +1,54 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
-
-interface Usuario {
+export interface Usuario {
   id: number;
   nome: string;
   email: string;
   tipo: "ADMIN" | "PROFESSOR";
+  categoria?: "INICIAIS" | "FINAIS" | null;
 }
-
 
 interface AuthContextType {
-
   usuario: Usuario | null;
-
-  login: (usuario: Usuario) => void;
-
+  login: (usuario: Usuario, token: string) => void;
   logout: () => void;
-
 }
 
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthContext =
-createContext<AuthContextType | undefined>(
-  undefined
-);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [usuario, setUsuario] = useState<Usuario | null>(() => {
+    const salvo = localStorage.getItem("usuario");
+    if (!salvo || !localStorage.getItem("token")) return null;
+    try {
+      return JSON.parse(salvo) as Usuario;
+    } catch {
+      return null;
+    }
+  });
 
-
-
-export function AuthProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-
-
-  const [usuario, setUsuario] =
-    useState<Usuario | null>(() => {
-
-      const salvo =
-        localStorage.getItem("usuario");
-
-
-      return salvo
-        ? JSON.parse(salvo)
-        : null;
-
-    });
-
-
-
-  function login(usuario: Usuario) {
-
-    setUsuario(usuario);
-
-
-    localStorage.setItem(
-      "usuario",
-      JSON.stringify(usuario)
-    );
-
+  function login(novoUsuario: Usuario, token: string) {
+    localStorage.setItem("token", token);
+    localStorage.setItem("usuario", JSON.stringify(novoUsuario));
+    setUsuario(novoUsuario);
   }
-
-
 
   function logout() {
-
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
     setUsuario(null);
-
-    localStorage.removeItem(
-      "usuario"
-    );
-
   }
-
-
 
   return (
-
-    <AuthContext.Provider
-      value={{
-        usuario,
-        login,
-        logout,
-      }}
-    >
-
+    <AuthContext.Provider value={{ usuario, login, logout }}>
       {children}
-
     </AuthContext.Provider>
-
   );
-
 }
 
-
-
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
-
-  const context =
-    useContext(AuthContext);
-
-
-  if (!context) {
-
-    throw new Error(
-      "useAuth precisa estar dentro do AuthProvider"
-    );
-
-  }
-
-
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth precisa estar dentro do AuthProvider");
   return context;
-
 }
