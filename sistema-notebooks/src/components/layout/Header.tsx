@@ -1,5 +1,6 @@
 import { Bell, Menu, Search } from "lucide-react";
 import UserProfile from "./UserProfile";
+import ThemeToggle from "../ui/ThemeToggle";
 
 export default function Header({ onMenu }: { onMenu: () => void }) {
   return (
@@ -14,7 +15,6 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
       </button>
 
       <div className="relative hidden sm:block">
-
         <Search
           className="absolute left-3 top-3 text-slate-400"
           size={18}
@@ -24,24 +24,18 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
           placeholder="Pesquisar..."
           className="w-52 rounded-xl border py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-blue-500 lg:w-80"
         />
-
       </div>
 
       <div className="ml-auto flex items-center gap-3 sm:gap-6">
+        <ThemeToggle />
 
         <button className="relative">
-
           <Bell size={22} />
-
           <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500"></span>
-
         </button>
 
         <UserProfile />
-
       </div>
-
     </header>
   );
 }
-
