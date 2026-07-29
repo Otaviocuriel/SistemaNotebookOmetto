@@ -27,10 +27,13 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
+          <h2 className="text-xl font-bold text-slate-800">
+            {title}
+          </h2>
+
           <button
             type="button"
             onClick={onClose}
@@ -40,8 +43,12 @@ export default function Modal({
             <X size={20} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+
+        <div className="p-4 sm:p-6">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
+

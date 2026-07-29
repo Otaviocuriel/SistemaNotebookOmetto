@@ -69,11 +69,11 @@ export default function Notebooks() {
         {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
         <div className="grid md:grid-cols-2 gap-6">
           {itens.map((item) => (
-            <div key={item.id} className="bg-white rounded-2xl shadow-sm border p-6">
-              <div className="flex justify-between"><h2 className="text-2xl font-bold">
+            <div key={item.id} className="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+              <div className="flex justify-between gap-3"><h2 className="text-xl font-bold sm:text-2xl">
                 {item.categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais"}
               </h2><Laptop size={40} className="text-blue-600" /></div>
-              <div className="grid grid-cols-3 gap-3 mt-8">
+              <div className="mt-6 grid grid-cols-1 gap-3 min-[420px]:grid-cols-3 sm:mt-8">
                 <div className="bg-slate-100 rounded-xl p-4"><p>Total</p><strong className="text-3xl">{item.total}</strong></div>
                 <div className="bg-green-100 text-green-700 rounded-xl p-4"><p>Disponíveis</p><strong className="text-3xl">{item.disponivel}</strong></div>
                 <div className="bg-orange-100 text-orange-700 rounded-xl p-4"><p>Em uso</p><strong className="text-3xl">{item.emUso}</strong></div>

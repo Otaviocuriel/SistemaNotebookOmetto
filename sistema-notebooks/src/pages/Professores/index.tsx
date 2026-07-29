@@ -86,7 +86,7 @@ export default function Professores() {
         </div>
         {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
         <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
-          <table className="w-full">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-slate-100"><tr>
               {["Nome", "E-mail", "Categoria", "Cadastro", "Ações"].map((x) => <th key={x} className="p-4 text-left">{x}</th>)}
             </tr></thead>
@@ -132,7 +132,9 @@ export default function Professores() {
         >
           <form className="space-y-5" onSubmit={salvarEdicao}>
             <div>
-              <label htmlFor="professor-nome" className="mb-2 block text-sm font-semibold text-slate-700">Nome</label>
+              <label htmlFor="professor-nome" className="mb-2 block text-sm font-semibold text-slate-700">
+                Nome
+              </label>
               <input
                 id="professor-nome"
                 value={form.nome}
@@ -142,8 +144,11 @@ export default function Professores() {
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
+
             <div>
-              <label htmlFor="professor-email" className="mb-2 block text-sm font-semibold text-slate-700">E-mail</label>
+              <label htmlFor="professor-email" className="mb-2 block text-sm font-semibold text-slate-700">
+                E-mail
+              </label>
               <input
                 id="professor-email"
                 type="email"
@@ -153,18 +158,25 @@ export default function Professores() {
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
             </div>
+
             <div>
-              <label htmlFor="professor-categoria" className="mb-2 block text-sm font-semibold text-slate-700">Categoria</label>
+              <label htmlFor="professor-categoria" className="mb-2 block text-sm font-semibold text-slate-700">
+                Categoria
+              </label>
               <select
                 id="professor-categoria"
                 value={form.categoria}
-                onChange={(event) => setForm({ ...form, categoria: event.target.value as "INICIAIS" | "FINAIS" })}
+                onChange={(event) => setForm({
+                  ...form,
+                  categoria: event.target.value as "INICIAIS" | "FINAIS",
+                })}
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
                 <option value="INICIAIS">Anos Iniciais</option>
                 <option value="FINAIS">Anos Finais</option>
               </select>
             </div>
+
             <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
               <button
                 type="button"
@@ -204,6 +216,7 @@ export default function Professores() {
                 </p>
               </div>
             </div>
+
             <div className="flex justify-end gap-3">
               <button
                 type="button"
@@ -228,3 +241,4 @@ export default function Professores() {
     </AdminLayout>
   );
 }
+
