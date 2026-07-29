@@ -10,7 +10,10 @@ export const professorSchema = z.object({
 
   senha: z
     .string()
-    .min(6, "A senha deve ter pelo menos 6 caracteres"),
+    .min(10, "A senha deve ter pelo menos 10 caracteres")
+    .max(72, "A senha deve ter no máximo 72 caracteres")
+    .regex(/[A-Za-zÀ-ÿ]/, "A senha deve conter uma letra")
+    .regex(/[0-9]/, "A senha deve conter um número"),
 
   categoria: z.enum([
     "Anos Iniciais",
@@ -19,3 +22,4 @@ export const professorSchema = z.object({
 });
 
 export type ProfessorFormData = z.infer<typeof professorSchema>;
+

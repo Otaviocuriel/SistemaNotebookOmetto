@@ -149,37 +149,52 @@ async function alterarStatusComEstoque(
       if (!pedido) throw new Error("PEDIDO_NAO_ENCONTRADO");
 
       if (destino === "EM_USO") {
-        if (pedido.status !== "PENDENTE") throw new Error("STATUS_INVALIDO");
-        const estoque = await tx.notebook.findUnique({
-          where: { categoria: pedido.professor.categoria },
+        const pedidoAtualizado = await tx.pedido.updateMany({
+          where: { id, status: "PENDENTE" },
+          data: { status: "EM_USO" },
         });
-        if (!estoque || estoque.disponivel < pedido.quantidade) {
-          throw new Error("ESTOQUE_INSUFICIENTE");
+        if (pedidoAtualizado.count !== 1) {
+          throw new Error("STATUS_INVALIDO");
         }
-        await tx.notebook.update({
-          where: { categoria: pedido.professor.categoria },
+
+        const estoqueAtualizado = await tx.notebook.updateMany({
+          where: {
+            categoria: pedido.professor.categoria,
+            disponivel: { gte: pedido.quantidade },
+          },
           data: {
             disponivel: { decrement: pedido.quantidade },
             emUso: { increment: pedido.quantidade },
           },
         });
+        if (estoqueAtualizado.count !== 1) {
+          throw new Error("ESTOQUE_INSUFICIENTE");
+        }
       } else {
-        if (pedido.status !== "RETIRADA_SOLICITADA") {
+        const pedidoAtualizado = await tx.pedido.updateMany({
+          where: { id, status: "RETIRADA_SOLICITADA" },
+          data: { status: "FINALIZADO" },
+        });
+        if (pedidoAtualizado.count !== 1) {
           throw new Error("RETIRADA_NAO_SOLICITADA");
         }
-        await tx.notebook.update({
-          where: { categoria: pedido.professor.categoria },
+
+        const estoqueAtualizado = await tx.notebook.updateMany({
+          where: {
+            categoria: pedido.professor.categoria,
+            emUso: { gte: pedido.quantidade },
+          },
           data: {
             disponivel: { increment: pedido.quantidade },
             emUso: { decrement: pedido.quantidade },
           },
         });
+        if (estoqueAtualizado.count !== 1) {
+          throw new Error("ESTOQUE_INCONSISTENTE");
+        }
       }
 
-      return tx.pedido.update({
-        where: { id },
-        data: { status: destino },
-      });
+      return tx.pedido.findUniqueOrThrow({ where: { id } });
     });
     return res.json(resultado);
   } catch (error) {
@@ -189,10 +204,12 @@ async function alterarStatusComEstoque(
       PEDIDO_NAO_ENCONTRADO: "Pedido não encontrado.",
       STATUS_INVALIDO: "O pedido não pode mudar para esse status.",
       ESTOQUE_INSUFICIENTE: "Não há notebooks suficientes disponíveis.",
+      ESTOQUE_INCONSISTENTE: "O estoque em uso está inconsistente.",
     };
     if (messages[key]) return res.status(400).json({ message: messages[key] });
     console.error(error);
     return res.status(500).json({ message: "Erro ao atualizar pedido." });
   }
 }
+
 

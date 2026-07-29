@@ -55,7 +55,19 @@ export default function Cadastro() {
         {erro && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{erro}</p>}
         <input required minLength={3} name="nome" placeholder="Nome" value={form.nome} onChange={atualizar} className="w-full border p-3 rounded-lg" />
         <input required name="email" placeholder="E-mail" type="email" value={form.email} onChange={atualizar} className="w-full border p-3 rounded-lg" />
-        <input required minLength={6} name="senha" placeholder="Senha (mínimo 6 caracteres)" type="password" value={form.senha} onChange={atualizar} className="w-full border p-3 rounded-lg" />
+        <input
+          required
+          minLength={10}
+          maxLength={72}
+          pattern="(?=.*[A-Za-zÀ-ÿ])(?=.*[0-9]).{10,72}"
+          title="Use pelo menos 10 caracteres, com letras e números."
+          name="senha"
+          placeholder="Senha (10 caracteres, letras e números)"
+          type="password"
+          value={form.senha}
+          onChange={atualizar}
+          className="w-full border p-3 rounded-lg"
+        />
         <select name="categoria" value={form.categoria} onChange={atualizar} className="w-full border p-3 rounded-lg">
           <option value="INICIAIS">Anos Iniciais</option>
           <option value="FINAIS">Anos Finais</option>
@@ -67,4 +79,5 @@ export default function Cadastro() {
     </div>
   );
 }
+
 
