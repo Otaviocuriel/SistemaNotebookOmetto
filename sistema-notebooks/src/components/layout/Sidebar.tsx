@@ -11,11 +11,18 @@ export default function Sidebar() {
 
   return (
     <aside className="w-72 min-h-screen bg-white border-r border-slate-200 flex flex-col">
-      <div className="p-6 border-b">
-        <h1 className="text-2xl font-bold text-blue-600">Notebook Ometto</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          {admin ? "Painel Administrativo" : "Portal do Professor"}
-        </p>
+      <div className="flex items-center gap-3 border-b p-5">
+        <img
+          src="/logo-ometto.svg"
+          alt="E.E. José Ometto"
+          className="h-14 w-14 rounded-full border border-slate-200 object-cover"
+        />
+        <div>
+          <h1 className="text-xl font-bold leading-tight text-blue-700">Notebook Ometto</h1>
+          <p className="mt-1 text-xs text-slate-500">
+            {admin ? "Painel Administrativo" : "Portal do Professor"}
+          </p>
+        </div>
       </div>
       <nav className="flex-1 p-4 space-y-2">
         <MenuItem to="/dashboard" label="Dashboard" icon={House} />
@@ -44,3 +51,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+

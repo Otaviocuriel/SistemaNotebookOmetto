@@ -35,6 +35,11 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
       <form onSubmit={entrar} className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md space-y-5">
         <div className="text-center">
+          <img
+            src="/logo-ometto.svg"
+            alt="E.E. José Ometto"
+            className="mx-auto mb-4 h-24 w-24 rounded-full border border-slate-200 object-cover shadow-sm"
+          />
           <h1 className="text-3xl font-bold text-slate-800">Sistema Notebook Ometto</h1>
           <p className="text-slate-500 mt-2">Faça login para continuar</p>
         </div>
@@ -55,3 +60,4 @@ export default function Login() {
     </div>
   );
 }
+
