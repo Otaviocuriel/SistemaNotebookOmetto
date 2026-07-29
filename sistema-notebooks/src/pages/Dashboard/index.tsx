@@ -6,7 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { api } from "../../services/api";
 
 interface Estoque { categoria: "INICIAIS" | "FINAIS"; disponivel: number; }
-interface Pedido { status: "PENDENTE" | "EM_USO" | "FINALIZADO"; }
+interface Pedido { status: "PENDENTE" | "EM_USO" | "RETIRADA_SOLICITADA" | "FINALIZADO"; }
 
 export default function Dashboard() {
   const { usuario } = useAuth();
@@ -45,3 +45,4 @@ export default function Dashboard() {
     </AdminLayout>
   );
 }
+
