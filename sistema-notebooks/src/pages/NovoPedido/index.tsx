@@ -6,11 +6,11 @@ export default function NovoPedido() {
     <AdminLayout>
       <div className="max-w-2xl mx-auto">
 
-        <h1 className="text-3xl font-bold mb-8">
+        <h1 className="mb-5 text-2xl font-bold sm:mb-8 sm:text-3xl">
           Novo Pedido
         </h1>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
           <PedidoForm />
         </div>
 
@@ -18,3 +18,4 @@ export default function NovoPedido() {
     </AdminLayout>
   );
 }
+
