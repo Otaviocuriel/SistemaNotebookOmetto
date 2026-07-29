@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, mensagemErro } from "../../services/api";
+import ThemeToggle from "../../components/ui/ThemeToggle";
 
 export default function Cadastro() {
   const navigate = useNavigate();
@@ -25,7 +26,11 @@ export default function Cadastro() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+    <div className="relative min-h-screen flex items-center justify-center bg-slate-100 px-4">
+      <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+        <ThemeToggle />
+      </div>
+
       <form onSubmit={cadastrar} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-md sm:p-8">
         <h1 className="text-3xl font-bold text-center">Cadastro de professor</h1>
         <p className="text-center text-sm text-slate-500">Contas administrativas são criadas somente pela escola.</p>
@@ -43,4 +48,3 @@ export default function Cadastro() {
     </div>
   );
 }
-
