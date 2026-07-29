@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import AdminLayout from "../../layouts/AdminLayout";
+import Modal from "../../components/ui/Modal";
 import { api, mensagemErro } from "../../services/api";
 
 interface ProfessorApi {
@@ -12,6 +13,14 @@ interface ProfessorApi {
 export default function Professores() {
   const [professores, setProfessores] = useState<ProfessorApi[]>([]);
   const [erro, setErro] = useState("");
+  const [editando, setEditando] = useState<ProfessorApi | null>(null);
+  const [excluindo, setExcluindo] = useState<ProfessorApi | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [form, setForm] = useState({
+    nome: "",
+    email: "",
+    categoria: "INICIAIS" as "INICIAIS" | "FINAIS",
+  });
 
   async function carregar() {
     try {
@@ -29,48 +38,42 @@ export default function Professores() {
       .catch((error) => setErro(mensagemErro(error)));
   }, []);
 
-  async function editar(professor: ProfessorApi) {
-    const nome = window.prompt("Nome do professor:", professor.usuario.nome);
-    if (nome === null) return;
+  function abrirEdicao(professor: ProfessorApi) {
+    setForm({
+      nome: professor.usuario.nome,
+      email: professor.usuario.email,
+      categoria: professor.categoria,
+    });
+    setErro("");
+    setEditando(professor);
+  }
 
-    const email = window.prompt("E-mail do professor:", professor.usuario.email);
-    if (email === null) return;
-
-    const categoriaDigitada = window.prompt(
-      "Digite INICIAIS ou FINAIS:",
-      professor.categoria
-    );
-    if (categoriaDigitada === null) return;
-
-    const categoria = categoriaDigitada.trim().toUpperCase();
-    if (categoria !== "INICIAIS" && categoria !== "FINAIS") {
-      setErro("A categoria precisa ser INICIAIS ou FINAIS.");
-      return;
-    }
-
+  async function salvarEdicao(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editando) return;
+    setSalvando(true);
     try {
-      await api.put(`/usuarios/professores/${professor.id}`, {
-        nome,
-        email,
-        categoria,
-      });
+      await api.put(`/usuarios/professores/${editando.id}`, form);
       await carregar();
+      setEditando(null);
     } catch (error) {
       setErro(mensagemErro(error));
+    } finally {
+      setSalvando(false);
     }
   }
 
-  async function excluir(professor: ProfessorApi) {
-    const confirmou = window.confirm(
-      `Excluir ${professor.usuario.nome}? Os pedidos finalizados desse professor também serão apagados.`
-    );
-    if (!confirmou) return;
-
+  async function confirmarExclusao() {
+    if (!excluindo) return;
+    setSalvando(true);
     try {
-      await api.delete(`/usuarios/professores/${professor.id}`);
+      await api.delete(`/usuarios/professores/${excluindo.id}`);
       await carregar();
+      setExcluindo(null);
     } catch (error) {
       setErro(mensagemErro(error));
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -97,7 +100,7 @@ export default function Professores() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => editar(professor)}
+                      onClick={() => abrirEdicao(professor)}
                       className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-white hover:bg-amber-600"
                     >
                       <Pencil size={16} />
@@ -105,7 +108,10 @@ export default function Professores() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => excluir(professor)}
+                      onClick={() => {
+                        setErro("");
+                        setExcluindo(professor);
+                      }}
                       className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-white hover:bg-red-700"
                     >
                       <Trash2 size={16} />
@@ -118,6 +124,106 @@ export default function Professores() {
             </tbody>
           </table>
         </div>
+
+        <Modal
+          isOpen={Boolean(editando)}
+          title="Editar professor"
+          onClose={() => !salvando && setEditando(null)}
+        >
+          <form className="space-y-5" onSubmit={salvarEdicao}>
+            <div>
+              <label htmlFor="professor-nome" className="mb-2 block text-sm font-semibold text-slate-700">Nome</label>
+              <input
+                id="professor-nome"
+                value={form.nome}
+                onChange={(event) => setForm({ ...form, nome: event.target.value })}
+                required
+                minLength={3}
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="professor-email" className="mb-2 block text-sm font-semibold text-slate-700">E-mail</label>
+              <input
+                id="professor-email"
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                required
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="professor-categoria" className="mb-2 block text-sm font-semibold text-slate-700">Categoria</label>
+              <select
+                id="professor-categoria"
+                value={form.categoria}
+                onChange={(event) => setForm({ ...form, categoria: event.target.value as "INICIAIS" | "FINAIS" })}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="INICIAIS">Anos Iniciais</option>
+                <option value="FINAIS">Anos Finais</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
+              <button
+                type="button"
+                onClick={() => setEditando(null)}
+                disabled={salvando}
+                className="rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={salvando}
+                className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                {salvando ? "Salvando..." : "Salvar alterações"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+
+        <Modal
+          isOpen={Boolean(excluindo)}
+          title="Excluir professor"
+          onClose={() => !salvando && setExcluindo(null)}
+        >
+          <div className="space-y-5">
+            <div className="flex gap-4 rounded-xl border border-red-200 bg-red-50 p-4">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">
+                  Tem certeza que deseja excluir {excluindo?.usuario.nome}?
+                </p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  A conta e os pedidos finalizados desse professor serão apagados. Esta ação não pode ser desfeita.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setExcluindo(null)}
+                disabled={salvando}
+                className="rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarExclusao}
+                disabled={salvando}
+                className="rounded-xl bg-red-600 px-5 py-2.5 font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {salvando ? "Excluindo..." : "Excluir professor"}
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </AdminLayout>
   );
