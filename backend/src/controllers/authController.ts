@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../utils/prisma.js";
 import { env } from "../config/env.js";
+import { notificarNovoCadastro } from "../services/notificacaoEmailService.js";
 
 const cadastroSchema = z.object({
   nome: z.string().trim().min(3),
@@ -33,6 +34,7 @@ export async function register(req: Request, res: Response) {
         email,
         senha: senhaHash,
         tipo: "PROFESSOR",
+        statusCadastro: "PENDENTE",
         professor: { create: { categoria } },
       },
       select: {
@@ -40,12 +42,20 @@ export async function register(req: Request, res: Response) {
         nome: true,
         email: true,
         tipo: true,
+        statusCadastro: true,
         createdAt: true,
       },
     });
 
+    void notificarNovoCadastro({
+      usuarioId: usuario.id,
+      professor: usuario.nome,
+      email: usuario.email,
+      categoria,
+    });
+
     return res.status(201).json({
-      message: "Usuário criado com sucesso",
+      message: "Cadastro enviado. Aguarde a aprovação de um administrador.",
       usuario,
     });
   } catch (error) {
@@ -74,6 +84,12 @@ export async function login(req: Request, res: Response) {
       return res.status(400).json({ message: "E-mail ou senha inválidos" });
     }
 
+    if (usuario.tipo === "PROFESSOR" && usuario.statusCadastro !== "APROVADO") {
+      return res.status(403).json({
+        message: "Seu cadastro ainda está aguardando aprovação.",
+      });
+    }
+
     const token = jwt.sign(
       { id: usuario.id, tipo: usuario.tipo },
       env.JWT_SECRET,
@@ -99,3 +115,4 @@ export async function login(req: Request, res: Response) {
     return res.status(500).json({ message: "Erro no login" });
   }
 }
+
