@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Clock3, Pencil, Trash2, X } from "lucide-react";
 import AdminLayout from "../../layouts/AdminLayout";
 import Modal from "../../components/ui/Modal";
 import { api, mensagemErro } from "../../services/api";
@@ -12,10 +12,12 @@ interface ProfessorApi {
 
 export default function Professores() {
   const [professores, setProfessores] = useState<ProfessorApi[]>([]);
+  const [solicitacoes, setSolicitacoes] = useState<ProfessorApi[]>([]);
   const [erro, setErro] = useState("");
   const [editando, setEditando] = useState<ProfessorApi | null>(null);
   const [excluindo, setExcluindo] = useState<ProfessorApi | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [processandoId, setProcessandoId] = useState<number | null>(null);
   const [form, setForm] = useState({
     nome: "",
     email: "",
@@ -24,8 +26,12 @@ export default function Professores() {
 
   async function carregar() {
     try {
-      const { data } = await api.get<ProfessorApi[]>("/usuarios/professores");
-      setProfessores(data);
+      const [professoresResposta, solicitacoesResposta] = await Promise.all([
+        api.get<ProfessorApi[]>("/usuarios/professores"),
+        api.get<ProfessorApi[]>("/usuarios/solicitacoes"),
+      ]);
+      setProfessores(professoresResposta.data);
+      setSolicitacoes(solicitacoesResposta.data);
       setErro("");
     } catch (error) {
       setErro(mensagemErro(error));
@@ -33,10 +39,43 @@ export default function Professores() {
   }
 
   useEffect(() => {
-    api.get<ProfessorApi[]>("/usuarios/professores")
-      .then(({ data }) => setProfessores(data))
+    Promise.all([
+      api.get<ProfessorApi[]>("/usuarios/professores"),
+      api.get<ProfessorApi[]>("/usuarios/solicitacoes"),
+    ])
+      .then(([professoresResposta, solicitacoesResposta]) => {
+        setProfessores(professoresResposta.data);
+        setSolicitacoes(solicitacoesResposta.data);
+      })
       .catch((error) => setErro(mensagemErro(error)));
   }, []);
+
+  async function aprovar(professor: ProfessorApi) {
+    setProcessandoId(professor.id);
+    setErro("");
+    try {
+      await api.patch(`/usuarios/solicitacoes/${professor.id}/aprovar`);
+      await carregar();
+    } catch (error) {
+      setErro(mensagemErro(error));
+    } finally {
+      setProcessandoId(null);
+    }
+  }
+
+  async function recusar(professor: ProfessorApi) {
+    if (!window.confirm(`Recusar o cadastro de ${professor.usuario.nome}?`)) return;
+    setProcessandoId(professor.id);
+    setErro("");
+    try {
+      await api.delete(`/usuarios/solicitacoes/${professor.id}`);
+      await carregar();
+    } catch (error) {
+      setErro(mensagemErro(error));
+    } finally {
+      setProcessandoId(null);
+    }
+  }
 
   function abrirEdicao(professor: ProfessorApi) {
     setForm({
@@ -85,6 +124,58 @@ export default function Professores() {
           <p className="text-slate-500">Professores cadastrados no banco de dados.</p>
         </div>
         {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
+
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Clock3 className="text-amber-500" size={22} />
+            <h2 className="text-xl font-bold">Solicitações pendentes</h2>
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
+              {solicitacoes.length}
+            </span>
+          </div>
+
+          {solicitacoes.length ? (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {solicitacoes.map((professor) => (
+                <article key={professor.id} className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
+                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                    <div>
+                      <h3 className="text-lg font-bold">{professor.usuario.nome}</h3>
+                      <p className="text-sm text-slate-500">{professor.usuario.email}</p>
+                      <p className="mt-2 text-sm font-medium">
+                        {professor.categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={processandoId === professor.id}
+                        onClick={() => aprovar(professor)}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        <Check size={18} /> Aprovar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={processandoId === professor.id}
+                        onClick={() => recusar(professor)}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        <X size={18} /> Recusar
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border bg-white p-5 text-sm text-slate-500">
+              Nenhum cadastro aguardando aprovação.
+            </div>
+          )}
+        </section>
+
+        <h2 className="text-xl font-bold">Professores aprovados</h2>
         <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
           <table className="w-full min-w-[800px]">
             <thead className="bg-slate-100"><tr>
