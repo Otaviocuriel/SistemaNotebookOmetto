@@ -3,8 +3,37 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  background: #f1f5f9;
+  background: #f5f7f8;
   color: #0f172a;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: #a7f3d0;
+  color: #064e3b;
 }
 
 html {
@@ -83,3 +112,250 @@ html.dark {
 .dark .shadow-2xl {
   --tw-shadow-color: rgb(0 0 0 / 0.35);
 }
+
+.settings-section {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.settings-section__heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1.125rem 1.25rem;
+}
+
+.settings-section__heading h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.settings-section__heading p,
+.settings-row p {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.settings-icon {
+  display: grid;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex: none;
+  place-items: center;
+  border-radius: 9px;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  padding: 1rem 1.25rem;
+}
+
+.settings-row:first-of-type {
+  border-top: 0;
+}
+
+.choice-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 78px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: left;
+  color: #475569;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.choice-card:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.choice-card--active {
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.choice-card span {
+  display: grid;
+}
+
+.choice-card strong {
+  color: #0f172a;
+}
+
+.choice-card small {
+  margin-top: 0.15rem;
+  color: #64748b;
+}
+
+.account-line {
+  display: grid;
+  gap: 0.2rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.75rem;
+}
+
+.account-line span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.account-line strong {
+  overflow-wrap: anywhere;
+}
+
+.primary-button,
+.secondary-button,
+.secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.primary-button {
+  border: 1px solid #047857;
+  background: #047857;
+  color: white;
+}
+
+.primary-button:hover {
+  background: #065f46;
+}
+
+.secondary-button,
+.secondary-action {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #334155;
+}
+
+.secondary-button:hover,
+.secondary-action:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.form-label {
+  margin-bottom: 0.5rem;
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.form-control {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: white;
+  padding: 0.75rem 0.875rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.form-control:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgb(16 185 129 / 0.14);
+}
+
+.dark .settings-section,
+.dark .secondary-button,
+.dark .secondary-action,
+.dark .form-control {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.dark .settings-section__heading,
+.dark .settings-row {
+  border-color: #334155;
+}
+
+.dark .settings-section__heading h2,
+.dark .choice-card strong,
+.dark .form-label {
+  color: #e2e8f0;
+}
+
+.dark .choice-card {
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.dark .choice-card:hover {
+  border-color: #64748b;
+  background: #172033;
+}
+
+.dark .choice-card--active {
+  border-color: #047857;
+  background: rgb(6 78 59 / 0.32);
+  color: #6ee7b7;
+}
+
+.dark .account-line {
+  border-color: #1e293b;
+}
+
+.dark .secondary-button,
+.dark .secondary-action {
+  color: #e2e8f0;
+}
+
+.compact-ui main {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.compact-ui table th,
+.compact-ui table td {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+}
+
+.compact-ui .settings-row,
+.compact-ui .settings-section__heading {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+@media (max-width: 640px) {
+  .settings-row {
+    align-items: flex-start;
+  }
+}
+

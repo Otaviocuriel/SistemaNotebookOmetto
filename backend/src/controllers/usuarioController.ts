@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
+import bcrypt from "bcrypt";
 import { z } from "zod";
 import { prisma } from "../utils/prisma.js";
 
@@ -8,6 +9,50 @@ const professorSchema = z.object({
   email: z.string().trim().email().max(150),
   categoria: z.enum(["INICIAIS", "FINAIS"]),
 });
+
+const senhaSchema = z
+  .object({
+    senhaAtual: z.string().min(1),
+    novaSenha: z
+      .string()
+      .min(10)
+      .max(72)
+      .regex(/[A-Za-zÀ-ÿ]/)
+      .regex(/[0-9]/),
+  })
+  .refine((dados) => dados.senhaAtual !== dados.novaSenha, {
+    message: "A nova senha deve ser diferente da atual.",
+    path: ["novaSenha"],
+  });
+
+export async function alterarMinhaSenha(req: Request, res: Response) {
+  try {
+    const { senhaAtual, novaSenha } = senhaSchema.parse(req.body);
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuario!.id },
+    });
+
+    if (!usuario || !(await bcrypt.compare(senhaAtual, usuario.senha))) {
+      return res.status(400).json({ message: "A senha atual está incorreta." });
+    }
+
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { senha: await bcrypt.hash(novaSenha, 10) },
+    });
+
+    return res.json({ message: "Senha alterada com sucesso." });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        message:
+          "Use uma senha de 10 a 72 caracteres, contendo letras e números.",
+      });
+    }
+    console.error(error);
+    return res.status(500).json({ message: "Erro ao alterar a senha." });
+  }
+}
 
 export async function listarProfessores(_req: Request, res: Response) {
   const professores = await prisma.professor.findMany({
@@ -184,4 +229,5 @@ export async function excluirProfessor(req: Request, res: Response) {
     return res.status(500).json({ message: "Erro ao excluir professor." });
   }
 }
+
 

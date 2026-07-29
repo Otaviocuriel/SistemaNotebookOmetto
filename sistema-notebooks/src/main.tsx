@@ -6,15 +6,19 @@ import "./index.css";
 
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { SettingsProvider } from "./context/SettingsContext";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(
   <React.StrictMode>
     <ThemeProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </SettingsProvider>
     </ThemeProvider>
   </React.StrictMode>
 );
+
