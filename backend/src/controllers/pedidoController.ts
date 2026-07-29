@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../utils/prisma.js";
+import { notificarAdministradores } from "../services/notificacaoEmailService.js";
 
 const novoPedidoSchema = z.object({
   sala: z.string().trim().min(2).max(30),
@@ -29,6 +30,16 @@ export async function criarPedido(req: Request, res: Response) {
     const pedido = await prisma.pedido.create({
       data: { professorId: professor.id, sala, quantidade },
     });
+
+    await notificarAdministradores({
+      tipo: "NOVO_PEDIDO",
+      pedidoId: pedido.id,
+      professor: req.usuario!.nome,
+      sala: pedido.sala,
+      quantidade: pedido.quantidade,
+      categoria: professor.categoria,
+    });
+
     return res.status(201).json(pedido);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -102,6 +113,16 @@ export async function solicitarRetirada(req: Request, res: Response) {
       where: { id },
       data: { status: "RETIRADA_SOLICITADA" },
     });
+
+    await notificarAdministradores({
+      tipo: "RETIRADA_SOLICITADA",
+      pedidoId: atualizado.id,
+      professor: req.usuario!.nome,
+      sala: atualizado.sala,
+      quantidade: atualizado.quantidade,
+      categoria: professor.categoria,
+    });
+
     return res.json(atualizado);
   } catch (error) {
     console.error(error);
