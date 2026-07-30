@@ -4,7 +4,7 @@ Sistema full stack para solicitação, entrega e devolução de notebooks escola
 
 ## Estrutura
 
-- `sistema-notebooks`: React, TypeScript, Vite e Tailwind CSS.
+- `frontend`: React, TypeScript, Vite e Tailwind CSS.
 - `backend`: Node.js, Express, Prisma 7 e PostgreSQL.
 
 ## Configuração local
@@ -28,11 +28,11 @@ O seed cria ou atualiza somente os administradores Otávio e Gabriel e inicializ
 
 ### Frontend
 
-1. Opcionalmente, copie `sistema-notebooks/.env.example` para `sistema-notebooks/.env`.
+1. Opcionalmente, copie `frontend/.env.example` para `frontend/.env`.
 2. Execute:
 
 ```bash
-cd sistema-notebooks
+cd frontend
 npm install
 npm run dev
 ```
@@ -48,5 +48,6 @@ O cadastro público sempre cria um professor. Contas administrativas são provis
 
 ```bash
 cd backend && npm run build
-cd sistema-notebooks && npm run build && npm run lint
+cd frontend && npm run build && npm run lint
 ```
+
