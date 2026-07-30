@@ -1,4 +1,10 @@
-# Sistema Notebook Ometto
+<div align="center">
+  <img src="./docs/images/logo-escola.png" alt="Logo da E.E. José Ometto" width="180" />
+
+  <h1>Sistema Notebook Ometto</h1>
+
+  <p>Plataforma de gestão e empréstimo de notebooks da E.E. José Ometto</p>
+</div>
 
 Sistema web desenvolvido para organizar a solicitação, a entrega e a devolução de notebooks da **E.E. José Ometto**.
 
