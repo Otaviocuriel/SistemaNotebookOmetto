@@ -1,5 +1,20 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { AlertTriangle, Check, Clock3, Pencil, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  CalendarDays,
+  Check,
+  Clock3,
+  GraduationCap,
+  Mail,
+  Pencil,
+  Trash2,
+  UserCheck,
+  UserRound,
+  Users,
+  X,
+} from "lucide-react";
+
 import AdminLayout from "../../layouts/AdminLayout";
 import Modal from "../../components/ui/Modal";
 import { api, mensagemErro } from "../../services/api";
@@ -7,7 +22,20 @@ import { api, mensagemErro } from "../../services/api";
 interface ProfessorApi {
   id: number;
   categoria: "INICIAIS" | "FINAIS";
-  usuario: { id: number; nome: string; email: string; createdAt: string };
+  usuario: {
+    id: number;
+    nome: string;
+    email: string;
+    createdAt: string;
+  };
+}
+
+function nomeCategoria(categoria: ProfessorApi["categoria"]) {
+  return categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais";
+}
+
+function formatarData(data: string) {
+  return new Intl.DateTimeFormat("pt-BR").format(new Date(data));
 }
 
 export default function Professores() {
@@ -18,6 +46,7 @@ export default function Professores() {
   const [excluindo, setExcluindo] = useState<ProfessorApi | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [processandoId, setProcessandoId] = useState<number | null>(null);
+
   const [form, setForm] = useState({
     nome: "",
     email: "",
@@ -30,6 +59,7 @@ export default function Professores() {
         api.get<ProfessorApi[]>("/usuarios/professores"),
         api.get<ProfessorApi[]>("/usuarios/solicitacoes"),
       ]);
+
       setProfessores(professoresResposta.data);
       setSolicitacoes(solicitacoesResposta.data);
       setErro("");
@@ -39,20 +69,21 @@ export default function Professores() {
   }
 
   useEffect(() => {
-    Promise.all([
-      api.get<ProfessorApi[]>("/usuarios/professores"),
-      api.get<ProfessorApi[]>("/usuarios/solicitacoes"),
-    ])
-      .then(([professoresResposta, solicitacoesResposta]) => {
-        setProfessores(professoresResposta.data);
-        setSolicitacoes(solicitacoesResposta.data);
-      })
+    api
+      .get<ProfessorApi[]>("/usuarios/professores")
+      .then(({ data }) => setProfessores(data))
+      .catch((error) => setErro(mensagemErro(error)));
+
+    api
+      .get<ProfessorApi[]>("/usuarios/solicitacoes")
+      .then(({ data }) => setSolicitacoes(data))
       .catch((error) => setErro(mensagemErro(error)));
   }, []);
 
   async function aprovar(professor: ProfessorApi) {
     setProcessandoId(professor.id);
     setErro("");
+
     try {
       await api.patch(`/usuarios/solicitacoes/${professor.id}/aprovar`);
       await carregar();
@@ -64,9 +95,15 @@ export default function Professores() {
   }
 
   async function recusar(professor: ProfessorApi) {
-    if (!window.confirm(`Recusar o cadastro de ${professor.usuario.nome}?`)) return;
+    const confirmou = window.confirm(
+      `Recusar o cadastro de ${professor.usuario.nome}?`,
+    );
+
+    if (!confirmou) return;
+
     setProcessandoId(professor.id);
     setErro("");
+
     try {
       await api.delete(`/usuarios/solicitacoes/${professor.id}`);
       await carregar();
@@ -83,14 +120,19 @@ export default function Professores() {
       email: professor.usuario.email,
       categoria: professor.categoria,
     });
+
     setErro("");
     setEditando(professor);
   }
 
   async function salvarEdicao(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!editando) return;
+
     setSalvando(true);
+    setErro("");
+
     try {
       await api.put(`/usuarios/professores/${editando.id}`, form);
       await carregar();
@@ -104,7 +146,10 @@ export default function Professores() {
 
   async function confirmarExclusao() {
     if (!excluindo) return;
+
     setSalvando(true);
+    setErro("");
+
     try {
       await api.delete(`/usuarios/professores/${excluindo.id}`);
       await carregar();
@@ -116,105 +161,353 @@ export default function Professores() {
     }
   }
 
+  const professoresIniciais = professores.filter(
+    (professor) => professor.categoria === "INICIAIS",
+  ).length;
+
+  const professoresFinais = professores.filter(
+    (professor) => professor.categoria === "FINAIS",
+  ).length;
+
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Professores</h1>
-          <p className="text-slate-500">Professores cadastrados no banco de dados.</p>
-        </div>
-        {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
+      <div className="mx-auto w-full max-w-[1500px] space-y-7">
+        <section>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#347b58] dark:text-emerald-400">
+            Gestão de usuários
+          </p>
 
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Clock3 className="text-amber-500" size={22} />
-            <h2 className="text-xl font-bold">Solicitações pendentes</h2>
-            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Professores
+          </h1>
+
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
+            Analise solicitações e gerencie os professores autorizados a usar o
+            sistema.
+          </p>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Resumo
+            titulo="Professores aprovados"
+            valor={professores.length}
+            icone={<Users size={24} />}
+            cor="verde"
+          />
+
+          <Resumo
+            titulo="Anos Iniciais"
+            valor={professoresIniciais}
+            icone={<GraduationCap size={24} />}
+            cor="azul"
+          />
+
+          <Resumo
+            titulo="Anos Finais"
+            valor={professoresFinais}
+            icone={<UserCheck size={24} />}
+            cor="dourado"
+          />
+        </section>
+
+        {erro && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+          >
+            <AlertCircle className="mt-0.5 shrink-0" size={20} />
+            <p>{erro}</p>
+          </div>
+        )}
+
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-xl bg-amber-50 p-2.5 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300">
+              <Clock3 size={22} />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                Solicitações pendentes
+              </h2>
+
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Cadastros que precisam da aprovação de um administrador.
+              </p>
+            </div>
+
+            <span className="ml-auto rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
               {solicitacoes.length}
             </span>
           </div>
 
-          {solicitacoes.length ? (
+          {solicitacoes.length > 0 ? (
             <div className="grid gap-4 xl:grid-cols-2">
-              {solicitacoes.map((professor) => (
-                <article key={professor.id} className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
-                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                    <div>
-                      <h3 className="text-lg font-bold">{professor.usuario.nome}</h3>
-                      <p className="text-sm text-slate-500">{professor.usuario.email}</p>
-                      <p className="mt-2 text-sm font-medium">
-                        {professor.categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais"}
-                      </p>
+              {solicitacoes.map((professor) => {
+                const processando = processandoId === professor.id;
+
+                return (
+                  <article
+                    key={professor.id}
+                    className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm dark:border-amber-900/70 dark:bg-slate-800"
+                  >
+                    <div className="h-1 bg-amber-400" />
+
+                    <div className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                          <UserRound size={23} />
+                        </div>
+
+                        <div className="min-w-0">
+                          <h3 className="truncate text-lg font-bold text-slate-900 dark:text-slate-100">
+                            {professor.usuario.nome}
+                          </h3>
+
+                          <p className="mt-1 flex items-center gap-2 break-all text-sm text-slate-500 dark:text-slate-400">
+                            <Mail className="shrink-0" size={15} />
+                            {professor.usuario.email}
+                          </p>
+
+                          <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                            <GraduationCap size={14} />
+                            {nomeCategoria(professor.categoria)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-200 pt-5 dark:border-slate-700">
+                        <button
+                          type="button"
+                          disabled={processando}
+                          onClick={() => aprovar(professor)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1f513a] px-4 py-2.5 font-semibold text-white transition hover:bg-[#173d2c] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Check size={18} />
+                          {processando ? "Processando..." : "Aprovar"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={processando}
+                          onClick={() => recusar(professor)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-950/30"
+                        >
+                          <X size={18} />
+                          Recusar
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={processandoId === professor.id}
-                        onClick={() => aprovar(professor)}
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-                      >
-                        <Check size={18} /> Aprovar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={processandoId === professor.id}
-                        onClick={() => recusar(professor)}
-                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                      >
-                        <X size={18} /> Recusar
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           ) : (
-            <div className="rounded-2xl border bg-white p-5 text-sm text-slate-500">
-              Nenhum cadastro aguardando aprovação.
+            <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="rounded-full bg-emerald-50 p-3 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
+                <Check size={22} />
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  Nenhuma solicitação pendente
+                </p>
+
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Todos os cadastros já foram analisados.
+                </p>
+              </div>
             </div>
           )}
         </section>
 
-        <h2 className="text-xl font-bold">Professores aprovados</h2>
-        <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
-          <table className="w-full min-w-[800px]">
-            <thead className="bg-slate-100"><tr>
-              {["Nome", "E-mail", "Categoria", "Cadastro", "Ações"].map((x) => <th key={x} className="p-4 text-left">{x}</th>)}
-            </tr></thead>
-            <tbody>
-              {professores.map((professor) => <tr key={professor.id} className="border-t">
-                <td className="p-4 font-medium">{professor.usuario.nome}</td>
-                <td className="p-4">{professor.usuario.email}</td>
-                <td className="p-4">{professor.categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais"}</td>
-                <td className="p-4">{new Date(professor.usuario.createdAt).toLocaleDateString("pt-BR")}</td>
-                <td className="p-4">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => abrirEdicao(professor)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-white hover:bg-amber-600"
-                    >
-                      <Pencil size={16} />
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setErro("");
-                        setExcluindo(professor);
-                      }}
-                      className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-white hover:bg-red-700"
-                    >
-                      <Trash2 size={16} />
-                      Excluir
-                    </button>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+            <div className="rounded-xl bg-[#e5f0e9] p-2.5 text-[#1f513a] dark:bg-emerald-950/50 dark:text-emerald-300">
+              <Users size={22} />
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100">
+                Professores aprovados
+              </h2>
+
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Usuários autorizados a solicitar notebooks.
+              </p>
+            </div>
+          </div>
+
+          {/* Tabela para computador */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[850px]">
+              <thead className="bg-slate-50 dark:bg-slate-900/60">
+                <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="px-5 py-4">Professor</th>
+                  <th className="px-5 py-4">Categoria</th>
+                  <th className="px-5 py-4">Cadastro</th>
+                  <th className="px-5 py-4 text-right">Ações</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                {professores.map((professor) => (
+                  <tr
+                    key={professor.id}
+                    className="transition hover:bg-slate-50 dark:hover:bg-slate-700/40"
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e5f0e9] font-bold text-[#1f513a] dark:bg-emerald-950/60 dark:text-emerald-300">
+                          {professor.usuario.nome.charAt(0).toUpperCase()}
+                        </div>
+
+                        <div>
+                          <p className="font-semibold text-slate-900 dark:text-slate-100">
+                            {professor.usuario.nome}
+                          </p>
+
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            {professor.usuario.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                        <GraduationCap size={14} />
+                        {nomeCategoria(professor.categoria)}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarDays size={16} />
+                        {formatarData(professor.usuario.createdAt)}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => abrirEdicao(professor)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-[#b9d0c0] bg-white px-3.5 py-2 text-sm font-semibold text-[#1f513a] transition hover:bg-[#f2f7f4] dark:border-slate-600 dark:bg-slate-800 dark:text-emerald-300 dark:hover:bg-slate-700"
+                        >
+                          <Pencil size={16} />
+                          Editar
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setErro("");
+                            setExcluindo(professor);
+                          }}
+                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-950/30"
+                        >
+                          <Trash2 size={16} />
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+
+                {!professores.length && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-14 text-center">
+                      <Users className="mx-auto text-slate-400" size={36} />
+
+                      <p className="mt-3 font-semibold text-slate-800 dark:text-slate-200">
+                        Nenhum professor aprovado
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Os professores aprovados aparecerão aqui.
+                      </p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Cartões para celular */}
+          <div className="divide-y divide-slate-200 md:hidden dark:divide-slate-700">
+            {professores.map((professor) => (
+              <article key={professor.id} className="space-y-4 p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e5f0e9] font-bold text-[#1f513a] dark:bg-emerald-950/60 dark:text-emerald-300">
+                    {professor.usuario.nome.charAt(0).toUpperCase()}
                   </div>
-                </td>
-              </tr>)}
-              {!professores.length && <tr><td colSpan={5} className="p-8 text-center text-slate-500">Nenhum professor cadastrado.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
+                      {professor.usuario.nome}
+                    </p>
+
+                    <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+                      {professor.usuario.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Categoria
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {nomeCategoria(professor.categoria)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Cadastro
+                    </p>
+
+                    <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {formatarData(professor.usuario.createdAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => abrirEdicao(professor)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#b9d0c0] px-4 py-2.5 font-semibold text-[#1f513a] dark:border-slate-600 dark:text-emerald-300"
+                  >
+                    <Pencil size={17} />
+                    Editar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErro("");
+                      setExcluindo(professor);
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 font-semibold text-red-600 dark:border-red-900 dark:text-red-400"
+                  >
+                    <Trash2 size={17} />
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            ))}
+
+            {!professores.length && (
+              <div className="px-6 py-14 text-center text-slate-500 dark:text-slate-400">
+                Nenhum professor aprovado.
+              </div>
+            )}
+          </div>
+        </section>
 
         <Modal
           isOpen={Boolean(editando)}
@@ -222,65 +515,63 @@ export default function Professores() {
           onClose={() => !salvando && setEditando(null)}
         >
           <form className="space-y-5" onSubmit={salvarEdicao}>
-            <div>
-              <label htmlFor="professor-nome" className="mb-2 block text-sm font-semibold text-slate-700">
-                Nome
-              </label>
+            <CampoFormulario label="Nome" htmlFor="professor-nome">
               <input
                 id="professor-nome"
                 value={form.nome}
-                onChange={(event) => setForm({ ...form, nome: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, nome: event.target.value })
+                }
                 required
                 minLength={3}
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[#347b58] focus:ring-4 focus:ring-[#e5f0e9] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-emerald-950"
               />
-            </div>
+            </CampoFormulario>
 
-            <div>
-              <label htmlFor="professor-email" className="mb-2 block text-sm font-semibold text-slate-700">
-                E-mail
-              </label>
+            <CampoFormulario label="E-mail" htmlFor="professor-email">
               <input
                 id="professor-email"
                 type="email"
                 value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, email: event.target.value })
+                }
                 required
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[#347b58] focus:ring-4 focus:ring-[#e5f0e9] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-emerald-950"
               />
-            </div>
+            </CampoFormulario>
 
-            <div>
-              <label htmlFor="professor-categoria" className="mb-2 block text-sm font-semibold text-slate-700">
-                Categoria
-              </label>
+            <CampoFormulario label="Categoria" htmlFor="professor-categoria">
               <select
                 id="professor-categoria"
                 value={form.categoria}
-                onChange={(event) => setForm({
-                  ...form,
-                  categoria: event.target.value as "INICIAIS" | "FINAIS",
-                })}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    categoria: event.target.value as "INICIAIS" | "FINAIS",
+                  })
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[#347b58] focus:ring-4 focus:ring-[#e5f0e9] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-emerald-950"
               >
                 <option value="INICIAIS">Anos Iniciais</option>
                 <option value="FINAIS">Anos Finais</option>
               </select>
-            </div>
+            </CampoFormulario>
 
-            <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-700">
               <button
                 type="button"
                 onClick={() => setEditando(null)}
                 disabled={salvando}
-                className="rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Cancelar
               </button>
+
               <button
                 type="submit"
                 disabled={salvando}
-                className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-xl bg-[#1f513a] px-5 py-2.5 font-semibold text-white transition hover:bg-[#173d2c] disabled:opacity-50"
               >
                 {salvando ? "Salvando..." : "Salvar alterações"}
               </button>
@@ -294,29 +585,33 @@ export default function Professores() {
           onClose={() => !salvando && setExcluindo(null)}
         >
           <div className="space-y-5">
-            <div className="flex gap-4 rounded-xl border border-red-200 bg-red-50 p-4">
-              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+            <div className="flex gap-4 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
+              <div className="h-fit rounded-full bg-red-100 p-2 text-red-600 dark:bg-red-950 dark:text-red-300">
                 <AlertTriangle size={22} />
               </div>
+
               <div>
-                <p className="font-semibold text-slate-900">
-                  Tem certeza que deseja excluir {excluindo?.usuario.nome}?
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  Excluir {excluindo?.usuario.nome}?
                 </p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  A conta e os pedidos finalizados desse professor serão apagados. Esta ação não pode ser desfeita.
+
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  A conta e os pedidos finalizados desse professor serão
+                  apagados. Esta ação não poderá ser desfeita.
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setExcluindo(null)}
                 disabled={salvando}
-                className="rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Cancelar
               </button>
+
               <button
                 type="button"
                 onClick={confirmarExclusao}
@@ -333,3 +628,58 @@ export default function Professores() {
   );
 }
 
+interface ResumoProps {
+  titulo: string;
+  valor: number;
+  icone: React.ReactNode;
+  cor: "verde" | "azul" | "dourado";
+}
+
+function Resumo({ titulo, valor, icone, cor }: ResumoProps) {
+  const cores = {
+    verde:
+      "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
+    azul: "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
+    dourado:
+      "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+  };
+
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            {titulo}
+          </p>
+
+          <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+            {valor}
+          </p>
+        </div>
+
+        <div className={`rounded-xl p-3 ${cores[cor]}`}>{icone}</div>
+      </div>
+    </article>
+  );
+}
+
+interface CampoFormularioProps {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}
+
+function CampoFormulario({ label, htmlFor, children }: CampoFormularioProps) {
+  return (
+    <div>
+      <label
+        htmlFor={htmlFor}
+        className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+      >
+        {label}
+      </label>
+
+      {children}
+    </div>
+  );
+}
