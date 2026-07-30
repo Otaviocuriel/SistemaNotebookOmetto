@@ -1,110 +1,176 @@
+<div align="center">
+
 # Sistema Notebook Ometto
 
-Sistema web desenvolvido para organizar a solicitação, a entrega e a devolução de notebooks da **E.E. José Ometto**.
+### Plataforma de gestão e empréstimo de notebooks escolares
 
-O projeto substitui o processo manual no qual alunos precisam procurar os responsáveis pelos equipamentos. Pelo sistema, o professor consulta a disponibilidade, faz o pedido informando a sala e a quantidade necessária e acompanha todo o atendimento. Os administradores recebem a solicitação, registram a entrega, controlam a devolução e mantêm o estoque atualizado.
+Controle de **solicitações**, **estoque**, **entregas**, **devoluções** e **professores** da E.E. José Ometto.
 
-## Acesse o sistema
+<br />
 
-- **Aplicação:** https://sistema-notebook-ometto.onrender.com
-- **API:** https://sistema-notebook-ometto-api.onrender.com
+[![React](https://img.shields.io/badge/React-TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
-> O serviço gratuito da API pode levar alguns segundos para responder no primeiro acesso após um período sem uso.
+<br />
 
-## Principais funcionalidades
+[**Acessar o sistema**](https://sistema-notebook-ometto.onrender.com) · [**Acessar a API**](https://sistema-notebook-ometto-api.onrender.com)
 
-### Professor
+</div>
 
-- solicitação de cadastro com aprovação administrativa;
-- login seguro e controle de sessão;
-- visualização dos notebooks disponíveis para sua categoria;
-- criação de pedidos por sala e quantidade;
-- acompanhamento do status dos próprios pedidos;
-- solicitação de retirada dos notebooks após o uso;
-- escolha entre tema claro e escuro.
+---
 
-### Administrador
+## Sobre o projeto
 
-- painel com indicadores do sistema;
-- aprovação ou rejeição de novos professores;
-- edição e exclusão de professores;
-- visualização de todos os pedidos;
-- registro de entrega, retirada e devolução;
-- controle automático da quantidade disponível e em uso;
-- gerenciamento separado entre Anos Iniciais e Anos Finais;
-- relatórios de utilização;
-- configurações do sistema;
-- notificações por e-mail para novos cadastros, pedidos e solicitações de retirada.
+O **Sistema Notebook Ometto** foi criado para modernizar o empréstimo de notebooks da **E.E. José Ometto**.
 
-## Tecnologias utilizadas
+Antes, alunos precisavam sair da sala para avisar quantos equipamentos o professor necessitava. Agora, o professor consulta a disponibilidade, informa a sala e envia o pedido pelo sistema. Os administradores acompanham a solicitação, registram a entrega e controlam a devolução dos equipamentos.
 
-### Frontend
+> **Resumo:** uma solução simples e centralizada para organizar os notebooks da escola e reduzir interrupções durante as aulas.
 
-- **React** — criação da interface;
-- **TypeScript** — tipagem e segurança no desenvolvimento;
-- **Vite** — ambiente de desenvolvimento e build;
-- **Tailwind CSS** — estilização e responsividade;
-- **React Router** — navegação entre as páginas;
-- **React Hook Form** — gerenciamento de formulários;
-- **Axios** — comunicação com a API;
-- **Lucide React** — ícones da interface;
-- **Zod** — validação de dados.
+---
 
-### Backend
+## Funcionalidades
 
-- **Node.js** — execução do servidor;
-- **Express** — criação da API REST;
-- **TypeScript** — tipagem do backend;
-- **Prisma ORM** — acesso e gerenciamento do banco de dados;
-- **PostgreSQL** — armazenamento dos dados;
-- **JWT** — autenticação dos usuários;
-- **bcrypt** — proteção das senhas;
-- **Zod** — validação das requisições;
-- **Resend** — envio das notificações por e-mail.
+### Portal do professor
 
-### Infraestrutura
+- Solicitação de cadastro com aprovação de um administrador.
+- Consulta de notebooks disponíveis por categoria.
+- Novo pedido com sala e quantidade.
+- Acompanhamento do status dos próprios pedidos.
+- Solicitação de retirada após a utilização.
+- Tema claro e escuro.
 
-- **Render** — hospedagem do frontend e do backend;
-- **Neon** — banco de dados PostgreSQL em produção;
-- **GitHub** — versionamento e organização do código.
+### Painel administrativo
 
-## Estrutura do repositório
+- Dashboard com indicadores do sistema.
+- Aprovação e rejeição de novos professores.
+- Edição e exclusão de professores.
+- Controle de pedidos, entregas e devoluções.
+- Estoque automático de notebooks disponíveis e em uso.
+- Separação entre **Anos Iniciais** e **Anos Finais**.
+- Relatórios de utilização.
+- Configurações do sistema.
+- Notificações por e-mail para cadastros, pedidos e retiradas.
+
+---
+
+## Stack
+
+| Camada | Tecnologias |
+|---|---|
+| Frontend | React, TypeScript, Vite, React Router |
+| Interface | Tailwind CSS, Lucide React |
+| Formulários | React Hook Form, Zod |
+| Backend | Node.js, Express, TypeScript |
+| Banco de dados | PostgreSQL, Neon, Prisma ORM |
+| Autenticação | JWT, bcrypt |
+| Integrações | Axios, Resend |
+| Deploy | Render |
+| Versionamento | Git, GitHub |
+
+---
+
+## Arquitetura
 
 ```text
 SistemaNotebookOmetto/
-├── backend/     # API, regras de negócio, Prisma e banco de dados
-├── frontend/    # Interface React
+├── frontend/                 # Aplicação React
+│   ├── public/               # Imagens e arquivos públicos
+│   └── src/
+│       ├── components/       # Componentes reutilizáveis
+│       ├── context/          # Autenticação, tema e configurações
+│       ├── layouts/          # Estrutura das páginas
+│       ├── pages/            # Telas do sistema
+│       ├── routes/           # Rotas e proteção de acesso
+│       └── services/         # Comunicação com a API
+│
+├── backend/                  # API REST
+│   ├── prisma/               # Schema e migrations
+│   └── src/
+│       ├── controllers/      # Regras das requisições
+│       ├── middlewares/      # Autenticação e permissões
+│       ├── routes/           # Endpoints da API
+│       ├── scripts/          # Seed dos administradores
+│       ├── services/         # Serviços de e-mail
+│       └── utils/            # Configurações compartilhadas
+│
 └── README.md
 ```
 
-## Perfis e permissões
+---
 
-- **Professor:** consulta disponibilidade, cria solicitações e acompanha apenas os próprios pedidos.
-- **Administrador:** gerencia pedidos, estoque, professores, relatórios e configurações.
+## Fluxo do empréstimo
 
-O cadastro público cria somente contas de professor, que precisam ser aprovadas. As contas administrativas são configuradas de forma segura no backend.
+```text
+Professor envia o pedido
+          ↓
+Administrador recebe a solicitação
+          ↓
+Notebooks são entregues e o estoque é atualizado
+          ↓
+Professor solicita a retirada
+          ↓
+Administrador confirma a devolução
+          ↓
+Notebooks voltam a ficar disponíveis
+```
 
-## Executando localmente
+---
 
-### Backend
+## Perfis de acesso
 
-1. Copie `backend/.env.example` para `backend/.env`.
-2. Preencha as variáveis de ambiente necessárias.
-3. Execute:
+| Recurso | Professor | Administrador |
+|---|:---:|:---:|
+| Consultar disponibilidade | ✅ | ✅ |
+| Criar pedido | ✅ | — |
+| Ver os próprios pedidos | ✅ | — |
+| Gerenciar todos os pedidos | — | ✅ |
+| Gerenciar notebooks | — | ✅ |
+| Aprovar professores | — | ✅ |
+| Acessar relatórios | — | ✅ |
+| Alterar configurações | — | ✅ |
+
+O cadastro público cria somente contas de professor. Cada solicitação precisa ser aprovada antes que o usuário possa entrar no sistema.
+
+---
+
+## Como rodar localmente
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/Otaviocuriel/SistemaNotebookOmetto.git
+cd SistemaNotebookOmetto
+```
+
+### 2. Configure e inicie o backend
 
 ```bash
 cd backend
 npm install
+```
+
+Copie `.env.example` para `.env` e preencha as variáveis necessárias.
+
+```bash
 npm run prisma:generate
 npm run prisma:migrate
 npm run seed
 npm run dev
 ```
 
-### Frontend
+A API estará disponível em:
 
-1. Copie `frontend/.env.example` para `frontend/.env`, se necessário.
-2. Execute:
+```text
+http://localhost:3333
+```
+
+### 3. Inicie o frontend
+
+Em outro terminal:
 
 ```bash
 cd frontend
@@ -112,17 +178,84 @@ npm install
 npm run dev
 ```
 
-## Validação do projeto
+A aplicação estará disponível em:
 
-```bash
-cd backend
-npm run build
-
-cd ../frontend
-npm run build
-npm run lint
+```text
+http://localhost:5173
 ```
+
+---
+
+## Variáveis de ambiente
+
+Os exemplos estão disponíveis em:
+
+```text
+backend/.env.example
+frontend/.env.example
+```
+
+As principais configurações do backend são:
+
+```env
+DATABASE_URL=
+JWT_SECRET=
+OTAVIO_ADMIN_EMAIL=
+OTAVIO_ADMIN_PASSWORD=
+GABRIEL_ADMIN_EMAIL=
+GABRIEL_ADMIN_PASSWORD=
+RESEND_API_KEY=
+NOTIFICATION_EMAILS=
+EMAIL_FROM=
+FRONTEND_URL=
+```
+
+> Nunca envie o arquivo `.env` ou credenciais reais para o GitHub.
+
+---
+
+## Scripts
+
+### Backend
+
+| Comando | Função |
+|---|---|
+| `npm run dev` | Inicia a API em desenvolvimento |
+| `npm run build` | Gera o build de produção |
+| `npm run prisma:generate` | Gera o Prisma Client |
+| `npm run prisma:migrate` | Aplica migrations no banco local |
+| `npm run seed` | Configura administradores e estoque inicial |
+
+### Frontend
+
+| Comando | Função |
+|---|---|
+| `npm run dev` | Inicia o frontend em desenvolvimento |
+| `npm run build` | Gera o build de produção |
+| `npm run lint` | Verifica a qualidade do código |
+
+---
+
+## Status atual
+
+- ✅ Frontend e backend publicados.
+- ✅ Banco PostgreSQL em produção.
+- ✅ Autenticação e permissões por perfil.
+- ✅ Estoque atualizado automaticamente.
+- ✅ Aprovação de professores.
+- ✅ Notificações por e-mail.
+- ✅ Interface responsiva com tema claro e escuro.
+
+> No plano gratuito, a API pode levar alguns segundos para responder no primeiro acesso após um período sem uso.
+
+---
 
 ## Autor
 
-Desenvolvido por **Otávio Curiel** como uma solução para uma necessidade real da E.E. José Ometto.
+<div align="center">
+
+Desenvolvido por **Otávio Curiel** para atender uma necessidade real da E.E. José Ometto.
+
+[![GitHub](https://img.shields.io/badge/GitHub-Otaviocuriel-181717?style=for-the-badge&logo=github)](https://github.com/Otaviocuriel)
+
+</div>
