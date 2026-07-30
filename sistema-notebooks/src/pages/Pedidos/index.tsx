@@ -1,4 +1,15 @@
 import { useEffect, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock3,
+  Laptop,
+  MapPin,
+  PackageCheck,
+  RotateCcw,
+  UserRound,
+} from "lucide-react";
+
 import AdminLayout from "../../layouts/AdminLayout";
 import { api, mensagemErro } from "../../services/api";
 
@@ -16,16 +27,48 @@ interface PedidoApi {
   createdAt: string;
   professor: {
     categoria: "INICIAIS" | "FINAIS";
-    usuario: { nome: string; email: string };
+    usuario: {
+      nome: string;
+      email: string;
+    };
   };
 }
 
-const statusLabel: Record<StatusPedido, string> = {
-  PENDENTE: "Pendente",
-  EM_USO: "Em uso",
-  RETIRADA_SOLICITADA: "Retirada solicitada",
-  FINALIZADO: "Finalizado",
+const statusConfig: Record<
+  StatusPedido,
+  {
+    label: string;
+    classes: string;
+  }
+> = {
+  PENDENTE: {
+    label: "Pendente",
+    classes:
+      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300",
+  },
+  EM_USO: {
+    label: "Em uso",
+    classes:
+      "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300",
+  },
+  RETIRADA_SOLICITADA: {
+    label: "Retirada solicitada",
+    classes:
+      "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800/60 dark:bg-orange-950/40 dark:text-orange-300",
+  },
+  FINALIZADO: {
+    label: "Finalizado",
+    classes:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+  },
 };
+
+function formatarData(data: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(data));
+}
 
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState<PedidoApi[]>([]);
@@ -38,7 +81,8 @@ export default function Pedidos() {
   }
 
   useEffect(() => {
-    api.get<PedidoApi[]>("/pedidos")
+    api
+      .get<PedidoApi[]>("/pedidos")
       .then(({ data }) => setPedidos(data))
       .catch((error) => setErro(mensagemErro(error)));
   }, []);
@@ -46,6 +90,7 @@ export default function Pedidos() {
   async function alterar(id: number, acao: "entregar" | "receber") {
     setErro("");
     setAlterando(id);
+
     try {
       await api.patch(`/pedidos/${id}/${acao}`);
       await carregar();
@@ -56,94 +101,382 @@ export default function Pedidos() {
     }
   }
 
+  const pendentes = pedidos.filter(
+    (pedido) => pedido.status === "PENDENTE"
+  ).length;
+
+  const emUso = pedidos.filter(
+    (pedido) => pedido.status === "EM_USO"
+  ).length;
+
+  const retiradas = pedidos.filter(
+    (pedido) => pedido.status === "RETIRADA_SOLICITADA"
+  ).length;
+
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Pedidos</h1>
-          <p className="text-slate-500">
-            Controle de entrega e retirada dos notebooks.
+      <div className="mx-auto w-full max-w-[1500px] space-y-6">
+        <section>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#347b58] dark:text-emerald-400">
+            Controle de empréstimos
           </p>
-        </div>
 
-        {erro && <p className="rounded-lg bg-red-50 p-3 text-red-700">{erro}</p>}
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Pedidos
+          </h1>
 
-        <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
-          <table className="w-full min-w-[760px]">
-            <thead className="bg-slate-100">
-              <tr>
-                {["Professor", "Sala", "Quantidade", "Categoria", "Status", "Ação"].map(
-                  (titulo) => <th key={titulo} className="p-4 text-left">{titulo}</th>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
+            Acompanhe as solicitações e controle a entrega e a retirada dos
+            notebooks.
+          </p>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Pedidos pendentes
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+                  {pendentes}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-amber-50 p-3 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300">
+                <Clock3 size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Em uso
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+                  {emUso}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-blue-50 p-3 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
+                <Laptop size={24} />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Aguardando retirada
+                </p>
+
+                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
+                  {retiradas}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-orange-50 p-3 text-orange-600 dark:bg-orange-950/50 dark:text-orange-300">
+                <RotateCcw size={24} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {erro && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+          >
+            <AlertCircle className="mt-0.5 shrink-0" size={20} />
+            <p>{erro}</p>
+          </div>
+        )}
+
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+            <div className="rounded-xl bg-[#e5f0e9] p-2.5 text-[#1f513a] dark:bg-emerald-950/50 dark:text-emerald-300">
+              <PackageCheck size={22} />
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-slate-900 dark:text-slate-100">
+                Solicitações recebidas
+              </h2>
+
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {pedidos.length}{" "}
+                {pedidos.length === 1
+                  ? "pedido registrado"
+                  : "pedidos registrados"}
+              </p>
+            </div>
+          </div>
+
+          {/* Visual para computador */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[900px]">
+              <thead className="bg-slate-50 dark:bg-slate-900/60">
+                <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="px-5 py-4">Professor</th>
+                  <th className="px-5 py-4">Sala</th>
+                  <th className="px-5 py-4">Quantidade</th>
+                  <th className="px-5 py-4">Categoria</th>
+                  <th className="px-5 py-4">Data</th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4 text-right">Ação</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                {pedidos.map((pedido) => {
+                  const status = statusConfig[pedido.status];
+
+                  return (
+                    <tr
+                      key={pedido.id}
+                      className={
+                        pedido.status === "RETIRADA_SOLICITADA"
+                          ? "bg-orange-50/60 dark:bg-orange-950/10"
+                          : "transition hover:bg-slate-50 dark:hover:bg-slate-700/40"
+                      }
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e5f0e9] text-[#1f513a] dark:bg-emerald-950/60 dark:text-emerald-300">
+                            <UserRound size={19} />
+                          </div>
+
+                          <div>
+                            <p className="font-semibold text-slate-900 dark:text-slate-100">
+                              {pedido.professor.usuario.nome}
+                            </p>
+
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              {pedido.professor.usuario.email}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 font-medium text-slate-700 dark:text-slate-300">
+                        {pedido.sala}
+                      </td>
+
+                      <td className="px-5 py-4 font-semibold text-slate-900 dark:text-slate-100">
+                        {pedido.quantidade}
+                      </td>
+
+                      <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
+                        {pedido.professor.categoria === "INICIAIS"
+                          ? "Anos Iniciais"
+                          : "Anos Finais"}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">
+                        {formatarData(pedido.createdAt)}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${status.classes}`}
+                        >
+                          {status.label}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+                        <AcaoPedido
+                          pedido={pedido}
+                          alterando={alterando}
+                          alterar={alterar}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {!pedidos.length && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-14 text-center">
+                      <CheckCircle2
+                        size={36}
+                        className="mx-auto text-[#347b58] dark:text-emerald-400"
+                      />
+
+                      <p className="mt-3 font-semibold text-slate-800 dark:text-slate-200">
+                        Nenhum pedido encontrado
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        As novas solicitações aparecerão aqui.
+                      </p>
+                    </td>
+                  </tr>
                 )}
-              </tr>
-            </thead>
-            <tbody>
-              {pedidos.map((pedido) => (
-                <tr
-                  key={pedido.id}
-                  className={`border-t ${
-                    pedido.status === "RETIRADA_SOLICITADA" ? "bg-orange-50" : ""
-                  }`}
-                >
-                  <td className="p-4">{pedido.professor.usuario.nome}</td>
-                  <td className="p-4">{pedido.sala}</td>
-                  <td className="p-4">{pedido.quantidade}</td>
-                  <td className="p-4">
-                    {pedido.professor.categoria === "INICIAIS"
-                      ? "Anos Iniciais"
-                      : "Anos Finais"}
-                  </td>
-                  <td className="p-4">
-                    <span className={
-                      pedido.status === "RETIRADA_SOLICITADA"
-                        ? "font-semibold text-orange-700"
-                        : ""
-                    }>
-                      {statusLabel[pedido.status]}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Visual para celular */}
+          <div className="divide-y divide-slate-200 md:hidden dark:divide-slate-700">
+            {pedidos.map((pedido) => {
+              const status = statusConfig[pedido.status];
+
+              return (
+                <article key={pedido.id} className="space-y-4 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e5f0e9] text-[#1f513a] dark:bg-emerald-950/60 dark:text-emerald-300">
+                        <UserRound size={19} />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
+                          {pedido.professor.usuario.nome}
+                        </p>
+
+                        <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+                          {pedido.professor.usuario.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${status.classes}`}
+                    >
+                      {status.label}
                     </span>
-                  </td>
-                  <td className="p-4">
-                    {pedido.status === "PENDENTE" && (
-                      <button
-                        onClick={() => alterar(pedido.id, "entregar")}
-                        disabled={alterando === pedido.id}
-                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                      >
-                        {alterando === pedido.id ? "Salvando..." : "Entregar"}
-                      </button>
-                    )}
-                    {pedido.status === "EM_USO" && (
-                      <span className="text-slate-500">Aguardando o professor</span>
-                    )}
-                    {pedido.status === "RETIRADA_SOLICITADA" && (
-                      <button
-                        onClick={() => alterar(pedido.id, "receber")}
-                        disabled={alterando === pedido.id}
-                        className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-60"
-                      >
-                        {alterando === pedido.id
-                          ? "Confirmando..."
-                          : "Confirmar retirada"}
-                      </button>
-                    )}
-                    {pedido.status === "FINALIZADO" && (
-                      <span className="text-slate-400">Concluído</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {!pedidos.length && (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-500">
-                    Nenhum pedido encontrado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
+                      <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                        <MapPin size={14} />
+                        Sala
+                      </p>
+
+                      <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                        {pedido.sala}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/60">
+                      <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                        <Laptop size={14} />
+                        Quantidade
+                      </p>
+
+                      <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                        {pedido.quantidade}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    <p>
+                      {pedido.professor.categoria === "INICIAIS"
+                        ? "Anos Iniciais"
+                        : "Anos Finais"}
+                    </p>
+
+                    <p>{formatarData(pedido.createdAt)}</p>
+                  </div>
+
+                  <AcaoPedido
+                    pedido={pedido}
+                    alterando={alterando}
+                    alterar={alterar}
+                    mobile
+                  />
+                </article>
+              );
+            })}
+
+            {!pedidos.length && (
+              <div className="px-6 py-14 text-center">
+                <CheckCircle2
+                  size={36}
+                  className="mx-auto text-[#347b58] dark:text-emerald-400"
+                />
+
+                <p className="mt-3 font-semibold text-slate-800 dark:text-slate-200">
+                  Nenhum pedido encontrado
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </AdminLayout>
   );
 }
 
+interface AcaoPedidoProps {
+  pedido: PedidoApi;
+  alterando: number | null;
+  alterar: (id: number, acao: "entregar" | "receber") => Promise<void>;
+  mobile?: boolean;
+}
+
+function AcaoPedido({
+  pedido,
+  alterando,
+  alterar,
+  mobile = false,
+}: AcaoPedidoProps) {
+  const processando = alterando === pedido.id;
+  const largura = mobile ? "w-full justify-center" : "";
+
+  if (pedido.status === "PENDENTE") {
+    return (
+      <button
+        type="button"
+        onClick={() => alterar(pedido.id, "entregar")}
+        disabled={processando}
+        className={`inline-flex items-center gap-2 rounded-xl bg-[#1f513a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#173d2c] disabled:cursor-not-allowed disabled:opacity-60 ${largura}`}
+      >
+        <PackageCheck size={17} />
+        {processando ? "Salvando..." : "Entregar"}
+      </button>
+    );
+  }
+
+  if (pedido.status === "RETIRADA_SOLICITADA") {
+    return (
+      <button
+        type="button"
+        onClick={() => alterar(pedido.id, "receber")}
+        disabled={processando}
+        className={`inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 ${largura}`}
+      >
+        <RotateCcw size={17} />
+        {processando ? "Confirmando..." : "Confirmar retirada"}
+      </button>
+    );
+  }
+
+  if (pedido.status === "EM_USO") {
+    return (
+      <span
+        className={`inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 ${largura}`}
+      >
+        <Clock3 size={17} />
+        Aguardando professor
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 ${largura}`}
+    >
+      <CheckCircle2 size={17} />
+      Concluído
+    </span>
+  );
+}

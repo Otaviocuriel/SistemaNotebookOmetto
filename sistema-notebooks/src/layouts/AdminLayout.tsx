@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     navigate("/login", { replace: true });
   }
   return (
-    <div className="flex min-h-screen bg-slate-100">
+   <div className="flex min-h-screen bg-[#f3f6f4] dark:bg-[#111827]"> 
       <Sidebar
         aberto={menuAberto}
         onClose={() => setMenuAberto(false)}
