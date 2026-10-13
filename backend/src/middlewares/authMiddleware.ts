@@ -50,16 +50,23 @@ export async function authMiddleware(
         nome: true,
         email: true,
         tipo: true,
+        ativo: true,
+        statusCadastro: true,
       },
     });
 
-    if (!usuario) {
+    if (!usuario || !usuario.ativo || (usuario.tipo === "PROFESSOR" && usuario.statusCadastro !== "APROVADO")) {
       return res.status(401).json({
         message: "Usuário do token não encontrado",
       });
     }
 
-    req.usuario = usuario;
+    req.usuario = {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      tipo: usuario.tipo,
+    };
 
     next();
   } catch (error) {

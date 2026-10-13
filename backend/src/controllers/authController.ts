@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../utils/prisma.js";
 import { env } from "../config/env.js";
@@ -78,12 +79,21 @@ export async function register(req: Request, res: Response) {
 export async function login(req: Request, res: Response) {
   try {
     const { email, senha } = loginSchema.parse(req.body);
-    const usuario = await prisma.usuario.findUnique({
+    const consultaUsuario = {
       where: { email },
       include: {
         professor: { select: { categoria: true } },
       },
-    });
+    } as const;
+    let usuario;
+    try {
+      usuario = await prisma.usuario.findUnique(consultaUsuario);
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P1017")) {
+        throw error;
+      }
+      usuario = await prisma.usuario.findUnique(consultaUsuario);
+    }
 
     if (!usuario || !(await bcrypt.compare(senha, usuario.senha))) {
       return res.status(400).json({ message: "E-mail ou senha inválidos" });
@@ -93,6 +103,9 @@ export async function login(req: Request, res: Response) {
       return res.status(403).json({
         message: "Seu cadastro ainda está aguardando aprovação.",
       });
+    }
+    if (!usuario.ativo) {
+      return res.status(403).json({ message: "Esta conta está desativada. Procure a administração." });
     }
 
     const token = jwt.sign(
@@ -117,8 +130,33 @@ export async function login(req: Request, res: Response) {
       return res.status(400).json({ message: "E-mail e senha são obrigatórios" });
     }
     console.error(error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      ["P1001", "P1002", "P1017"].includes(error.code)
+    ) {
+      return res.status(503).json({
+        message: "Conexão com o banco de dados indisponível. Tente novamente em instantes.",
+      });
+    }
     return res.status(500).json({ message: "Erro no login" });
   }
+}
+
+export async function minhaConta(req: Request, res: Response) {
+  const usuario = req.usuario!;
+  const professor = usuario.tipo === "PROFESSOR"
+    ? await prisma.professor.findUnique({
+        where: { usuarioId: usuario.id },
+        select: { categoria: true },
+      })
+    : null;
+  return res.json({
+    id: usuario.id,
+    nome: usuario.nome,
+    email: usuario.email,
+    tipo: usuario.tipo,
+    categoria: professor?.categoria ?? null,
+  });
 }
 
 

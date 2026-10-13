@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcrypt";
 import { z } from "zod";
-import { prisma } from "../utils/prisma.js";
+import { prisma, transacaoSerializavel } from "../utils/prisma.js";
 
 const professorSchema = z.object({
   nome: z.string().trim().min(3).max(100),
@@ -59,7 +59,7 @@ export async function listarProfessores(_req: Request, res: Response) {
     where: { usuario: { statusCadastro: "APROVADO" } },
     include: {
       usuario: {
-        select: { id: true, nome: true, email: true, createdAt: true },
+        select: { id: true, nome: true, email: true, ativo: true, createdAt: true },
       },
     },
     orderBy: { usuario: { nome: "asc" } },
@@ -135,31 +135,18 @@ export async function editarProfessor(req: Request, res: Response) {
 
   try {
     const dados = professorSchema.parse(req.body);
-    const professor = await prisma.professor.findUnique({
-      where: { id },
-      include: { usuario: true },
-    });
-
-    if (!professor) {
-      return res.status(404).json({ message: "Professor não encontrado." });
-    }
-
-    if (professor.categoria !== dados.categoria) {
-      const pedidosAbertos = await prisma.pedido.count({
-        where: {
-          professorId: id,
-          status: { in: ["PENDENTE", "EM_USO", "RETIRADA_SOLICITADA"] },
-        },
-      });
-
-      if (pedidosAbertos > 0) {
-        return res.status(400).json({
-          message: "Finalize os pedidos abertos antes de alterar a categoria.",
+    const atualizado = await transacaoSerializavel(async (tx) => {
+      const professor = await tx.professor.findUnique({ where: { id } });
+      if (!professor) throw new Error("PROFESSOR_NAO_ENCONTRADO");
+      if (professor.categoria !== dados.categoria) {
+        const pedidosAbertos = await tx.pedido.count({
+          where: {
+            professorId: id,
+            status: { in: ["PENDENTE", "EM_USO", "RETIRADA_SOLICITADA"] },
+          },
         });
+        if (pedidosAbertos > 0) throw new Error("PEDIDOS_ABERTOS");
       }
-    }
-
-    const atualizado = await prisma.$transaction(async (tx) => {
       await tx.usuario.update({
         where: { id: professor.usuarioId },
         data: {
@@ -173,7 +160,7 @@ export async function editarProfessor(req: Request, res: Response) {
         data: { categoria: dados.categoria },
         include: {
           usuario: {
-            select: { id: true, nome: true, email: true, createdAt: true },
+            select: { id: true, nome: true, email: true, ativo: true, createdAt: true },
           },
         },
       });
@@ -181,6 +168,12 @@ export async function editarProfessor(req: Request, res: Response) {
 
     return res.json(atualizado);
   } catch (error) {
+    if (error instanceof Error && error.message === "PROFESSOR_NAO_ENCONTRADO") {
+      return res.status(404).json({ message: "Professor não encontrado." });
+    }
+    if (error instanceof Error && error.message === "PEDIDOS_ABERTOS") {
+      return res.status(409).json({ message: "Finalize os pedidos abertos antes de alterar a categoria." });
+    }
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: "Confira nome, e-mail e categoria." });
     }
@@ -199,35 +192,54 @@ export async function excluirProfessor(req: Request, res: Response) {
   }
 
   try {
-    const professor = await prisma.professor.findUnique({ where: { id } });
-    if (!professor) {
-      return res.status(404).json({ message: "Professor não encontrado." });
-    }
-
-    const pedidosAbertos = await prisma.pedido.count({
-      where: {
-        professorId: id,
-        status: { in: ["PENDENTE", "EM_USO", "RETIRADA_SOLICITADA"] },
-      },
-    });
-
-    if (pedidosAbertos > 0) {
-      return res.status(400).json({
-        message: "Finalize ou receba os pedidos abertos antes de excluir o professor.",
+    await transacaoSerializavel(async (tx) => {
+      const professor = await tx.professor.findUnique({ where: { id } });
+      if (!professor) throw new Error("PROFESSOR_NAO_ENCONTRADO");
+      const pedidosAbertos = await tx.pedido.count({
+        where: {
+          professorId: id,
+          status: { in: ["PENDENTE", "EM_USO", "RETIRADA_SOLICITADA"] },
+        },
       });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.pedido.deleteMany({ where: { professorId: id } });
-      await tx.professor.delete({ where: { id } });
-      await tx.usuario.delete({ where: { id: professor.usuarioId } });
+      if (pedidosAbertos > 0) throw new Error("PEDIDOS_ABERTOS");
+      await tx.usuario.update({
+        where: { id: professor.usuarioId },
+        data: { ativo: false },
+      });
     });
 
     return res.status(204).send();
   } catch (error) {
+    if (error instanceof Error && error.message === "PROFESSOR_NAO_ENCONTRADO") {
+      return res.status(404).json({ message: "Professor não encontrado." });
+    }
+    if (error instanceof Error && error.message === "PEDIDOS_ABERTOS") {
+      return res.status(409).json({ message: "Finalize os pedidos abertos antes de desativar o professor." });
+    }
     console.error(error);
     return res.status(500).json({ message: "Erro ao excluir professor." });
   }
+}
+
+export async function reativarProfessor(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ message: "Professor inválido." });
+  }
+
+  const professor = await prisma.professor.findUnique({
+    where: { id },
+    include: { usuario: true },
+  });
+  if (!professor || professor.usuario.statusCadastro !== "APROVADO") {
+    return res.status(404).json({ message: "Professor não encontrado." });
+  }
+
+  await prisma.usuario.update({
+    where: { id: professor.usuarioId },
+    data: { ativo: true },
+  });
+  return res.json({ message: "Professor reativado com sucesso." });
 }
 
 

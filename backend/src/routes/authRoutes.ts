@@ -1,10 +1,7 @@
 import { Router } from "express";
-import { 
-  register,
-  login,
-} from "../controllers/authController.js";
+import { login, minhaConta, register } from "../controllers/authController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { createRateLimiter } from "../middlewares/securityMiddleware.js";
-
 
 const router = Router();
 
@@ -17,24 +14,11 @@ const loginLimiter = createRateLimiter({
 const registerLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000,
   max: 5,
-  message: "Muitos cadastros enviados. Aguarde uma hora e tente novamente.",
+  message: "Muitos cadastros enviados. Aguarde uma hora para tentar novamente.",
 });
 
-router.post(
-  "/register",
-  registerLimiter,
-  register
-);
-
-
-
-router.post(
-  "/login",
-  loginLimiter,
-  login
-);
-
-
+router.get("/me", authMiddleware, minhaConta);
+router.post("/register", registerLimiter, register);
+router.post("/login", loginLimiter, login);
 
 export default router;
-

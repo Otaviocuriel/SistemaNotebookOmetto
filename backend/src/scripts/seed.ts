@@ -20,11 +20,7 @@ for (const admin of administradores) {
       senha: senhaHash,
       tipo: "ADMIN",
     },
-    update: {
-      nome: admin.nome,
-      senha: senhaHash,
-      tipo: "ADMIN",
-    },
+    update: {},
   });
 }
 

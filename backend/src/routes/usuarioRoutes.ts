@@ -9,6 +9,7 @@ import {
   listarSolicitacoesCadastro,
   recusarProfessor,
   alterarMinhaSenha,
+  reativarProfessor,
 } from "../controllers/usuarioController.js";
 import { createRateLimiter } from "../middlewares/securityMiddleware.js";
 
@@ -25,6 +26,7 @@ router.delete("/solicitacoes/:id", authMiddleware, adminMiddleware, recusarProfe
 router.get("/professores", authMiddleware, adminMiddleware, listarProfessores);
 router.put("/professores/:id", authMiddleware, adminMiddleware, editarProfessor);
 router.delete("/professores/:id", authMiddleware, adminMiddleware, excluirProfessor);
+router.patch("/professores/:id/reativar", authMiddleware, adminMiddleware, reativarProfessor);
 export default router;
 
 
