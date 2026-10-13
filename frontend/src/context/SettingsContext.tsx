@@ -12,10 +12,8 @@ type Densidade = "confortavel" | "compacta";
 interface SettingsContextValue {
   densidade: Densidade;
   reduzirAnimacoes: boolean;
-  mostrarAvisos: boolean;
   setDensidade: (densidade: Densidade) => void;
   setReduzirAnimacoes: (ativo: boolean) => void;
-  setMostrarAvisos: (ativo: boolean) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(
@@ -36,9 +34,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [reduzirAnimacoes, setReduzirAnimacoes] = useState(() =>
     lerBooleano("reduzirAnimacoes", false)
   );
-  const [mostrarAvisos, setMostrarAvisos] = useState(() =>
-    lerBooleano("mostrarAvisos", true)
-  );
 
   useEffect(() => {
     document.documentElement.classList.toggle(
@@ -51,19 +46,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     );
     localStorage.setItem("densidade", densidade);
     localStorage.setItem("reduzirAnimacoes", String(reduzirAnimacoes));
-    localStorage.setItem("mostrarAvisos", String(mostrarAvisos));
-  }, [densidade, reduzirAnimacoes, mostrarAvisos]);
+  }, [densidade, reduzirAnimacoes]);
 
   const value = useMemo(
     () => ({
       densidade,
       reduzirAnimacoes,
-      mostrarAvisos,
       setDensidade,
       setReduzirAnimacoes,
-      setMostrarAvisos,
     }),
-    [densidade, reduzirAnimacoes, mostrarAvisos]
+    [densidade, reduzirAnimacoes]
   );
 
   return (

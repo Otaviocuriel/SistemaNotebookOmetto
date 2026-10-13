@@ -58,10 +58,8 @@ export default function Configuracoes() {
   const {
     densidade,
     reduzirAnimacoes,
-    mostrarAvisos,
     setDensidade,
     setReduzirAnimacoes,
-    setMostrarAvisos,
   } = useSettings();
 
   const [modalSenha, setModalSenha] = useState(false);
@@ -276,26 +274,15 @@ export default function Configuracoes() {
 
         <SecaoConfiguracao
           titulo="Avisos"
-          descricao="Controle os indicadores exibidos neste navegador."
+          descricao="Notificações enviadas pela escola."
           icone={<Bell size={22} />}
         >
-          <LinhaConfiguracao
-            titulo="Mostrar indicador de avisos"
-            descricao="Exibe um ponto no cabeçalho quando os avisos estiverem ativos."
-          >
-            <Toggle
-              label="Mostrar indicador de avisos"
-              ativo={mostrarAvisos}
-              onChange={setMostrarAvisos}
-            />
-          </LinhaConfiguracao>
-
           <div className="flex items-start gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
             <Bell className="mt-0.5 shrink-0 text-[#347b58] dark:text-emerald-400" size={18} />
 
             <p>
-              Os e-mails de novos pedidos e retiradas continuam sendo enviados
-              aos endereços configurados no servidor.
+              Quando o envio estiver configurado no servidor, os administradores
+              receberão e-mails de novos cadastros, pedidos e retiradas.
             </p>
           </div>
         </SecaoConfiguracao>

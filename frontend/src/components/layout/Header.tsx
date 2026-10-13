@@ -1,9 +1,8 @@
-import { Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 import UserProfile from "./UserProfile";
 import ThemeToggle from "../ui/ThemeToggle";
-import { useSettings } from "../../context/SettingsContext";
 
 const titulos: Record<string, string> = {
   "/dashboard": "Visão geral",
@@ -18,7 +17,6 @@ const titulos: Record<string, string> = {
 
 export default function Header({ onMenu }: { onMenu: () => void }) {
   const location = useLocation();
-  const { mostrarAvisos } = useSettings();
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-[#dce5df] bg-white/95 px-4 backdrop-blur sm:h-20 sm:px-6 lg:px-8 dark:border-[#294337] dark:bg-[#101c16]/95">
@@ -43,17 +41,6 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
         <ThemeToggle />
-
-        {mostrarAvisos && (
-          <div
-            className="relative hidden rounded-lg border border-[#dce5df] bg-[#f7faf8] p-2 text-[#1f513a] sm:block dark:border-[#294337] dark:bg-[#17271f] dark:text-emerald-300"
-            title="Avisos por e-mail ativos"
-          >
-            <Bell size={20} />
-
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#b18a3d] ring-2 ring-white dark:ring-[#17271f]" />
-          </div>
-        )}
 
         <UserProfile />
       </div>
