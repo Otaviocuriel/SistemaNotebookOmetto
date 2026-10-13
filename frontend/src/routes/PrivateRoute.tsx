@@ -20,7 +20,7 @@ export default function PrivateRoute({
 
   if (!usuario) {
 
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
 
   }
 
@@ -28,7 +28,7 @@ export default function PrivateRoute({
 
   if (admin && usuario.tipo !== "ADMIN") {
 
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
 
   }
 

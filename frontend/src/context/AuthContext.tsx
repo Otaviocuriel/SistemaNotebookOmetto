@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { AUTH_EXPIRED_EVENT } from "../services/authEvents";
+import { api } from "../services/api";
 
 export interface Usuario {
   id: number;
@@ -26,6 +28,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+
+  useEffect(() => {
+    const encerrarSessao = () => setUsuario(null);
+    window.addEventListener(AUTH_EXPIRED_EVENT, encerrarSessao);
+    async function atualizarConta() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const { data } = await api.get<Usuario>("/auth/me");
+        if (localStorage.getItem("token") !== token) return;
+        localStorage.setItem("usuario", JSON.stringify(data));
+        setUsuario(data);
+      } catch {
+        // A resposta 401 é tratada pelo interceptor da API.
+      }
+    }
+    void atualizarConta();
+    window.addEventListener("focus", atualizarConta);
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, encerrarSessao);
+      window.removeEventListener("focus", atualizarConta);
+    };
+  }, []);
 
   function login(novoUsuario: Usuario, token: string) {
     localStorage.setItem("token", token);
