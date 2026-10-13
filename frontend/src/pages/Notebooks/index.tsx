@@ -11,43 +11,41 @@ import AdminLayout from "../../layouts/AdminLayout";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import { api, mensagemErro } from "../../services/api";
-
-interface Estoque {
-  id: number;
-  categoria: "INICIAIS" | "FINAIS";
-  total: number;
-  disponivel: number;
-  emUso: number;
-}
+import type { NotebookCategoria } from "../../types/notebook";
 
 export default function Notebooks() {
   const { usuario } = useAuth();
 
-  const [itens, setItens] = useState<Estoque[]>([]);
+  const [itens, setItens] = useState<NotebookCategoria[]>([]);
   const [erro, setErro] = useState("");
-  const [editando, setEditando] = useState<Estoque | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [editando, setEditando] = useState<NotebookCategoria | null>(null);
   const [total, setTotal] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   async function carregar() {
+    setCarregando(true);
     try {
-      const { data } = await api.get<Estoque[]>("/notebooks");
+      const { data } = await api.get<NotebookCategoria[]>("/notebooks");
 
       setItens(data);
       setErro("");
     } catch (error) {
       setErro(mensagemErro(error));
+    } finally {
+      setCarregando(false);
     }
   }
 
   useEffect(() => {
     api
-      .get<Estoque[]>("/notebooks")
+      .get<NotebookCategoria[]>("/notebooks")
       .then(({ data }) => setItens(data))
-      .catch((error) => setErro(mensagemErro(error)));
+      .catch((error) => setErro(mensagemErro(error)))
+      .finally(() => setCarregando(false));
   }, []);
 
-  function abrirEdicao(item: Estoque) {
+  function abrirEdicao(item: NotebookCategoria) {
     setEditando(item);
     setTotal(String(item.total));
     setErro("");
@@ -100,16 +98,20 @@ export default function Notebooks() {
         </header>
 
         {erro && (
-          <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-            {erro}
-          </p>
+          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+            {erro}{" "}
+            <button type="button" onClick={() => void carregar()} className="font-bold underline">
+              Tentar novamente
+            </button>
+          </div>
         )}
+        {carregando && <p role="status" className="text-sm text-slate-500">Carregando estoque...</p>}
 
         <div className="grid gap-5 xl:grid-cols-2">
           {itens.map((item) => {
             const porcentagem =
               item.total > 0
-                ? Math.round((item.disponivel / item.total) * 100)
+                ? Math.round((item.solicitavel / item.total) * 100)
                 : 0;
 
             return (
@@ -136,7 +138,7 @@ export default function Notebooks() {
                 </div>
 
                 <div className="p-5 sm:p-6">
-                  <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-2 2xl:grid-cols-4">
                     <div className="rounded-xl border border-[#e1e8e3] bg-[#f8faf9] p-4 dark:border-slate-700 dark:bg-slate-950">
                       <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                         <Boxes size={17} />
@@ -151,14 +153,23 @@ export default function Notebooks() {
                     <div className="rounded-xl border border-[#cfe0d4] bg-[#edf5f0] p-4 dark:border-emerald-900 dark:bg-emerald-950/25">
                       <div className="flex items-center gap-2 text-[#286548] dark:text-emerald-300">
                         <CheckCircle2 size={17} />
-                        <p className="text-sm font-semibold">Disponíveis</p>
+                        <p className="text-sm font-semibold">Para novos pedidos</p>
                       </div>
 
                       <strong className="mt-2 block text-3xl font-bold text-[#173d2c] dark:text-emerald-100">
-                        {item.disponivel}
+                        {item.solicitavel}
                       </strong>
                     </div>
 
+                    <div className="rounded-xl border border-[#eadcb9] bg-[#faf5e9] p-4 dark:border-amber-900/70 dark:bg-amber-950/20">
+                      <div className="flex items-center gap-2 text-[#8b6828] dark:text-amber-300">
+                        <Activity size={17} />
+                        <p className="text-sm font-semibold">Reservados</p>
+                      </div>
+                      <strong className="mt-2 block text-3xl font-bold text-[#6e501d] dark:text-amber-100">
+                        {item.reservado}
+                      </strong>
+                    </div>
                     <div className="rounded-xl border border-[#eadcb9] bg-[#faf5e9] p-4 dark:border-amber-900/70 dark:bg-amber-950/20">
                       <div className="flex items-center gap-2 text-[#8b6828] dark:text-amber-300">
                         <Activity size={17} />
@@ -174,7 +185,7 @@ export default function Notebooks() {
                   <div className="mt-6">
                     <div className="mb-2 flex justify-between text-xs font-semibold">
                       <span className="text-slate-500 dark:text-slate-400">
-                        Disponibilidade
+                        Disponibilidade para novos pedidos
                       </span>
 
                       <span className="text-[#286548] dark:text-emerald-400">
@@ -207,8 +218,8 @@ export default function Notebooks() {
             );
           })}
 
-          {!itens.length && (
-            <div className="rounded-2xl border border-dashed border-[#b9cbbf] bg-white p-8 text-center text-sm text-slate-500 dark:bg-slate-950 dark:bg-slate-900 dark:text-slate-400">
+          {!carregando && !erro && !itens.length && (
+            <div className="rounded-2xl border border-dashed border-[#b9cbbf] bg-white p-8 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
               O estoque ainda não foi cadastrado pelo administrador.
             </div>
           )}
@@ -224,11 +235,16 @@ export default function Notebooks() {
           onClose={() => !salvando && setEditando(null)}
         >
           <form onSubmit={salvarEdicao} className="space-y-5">
+            {erro && (
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                {erro}
+              </p>
+            )}
             <div className="rounded-xl border border-[#cfe0d4] bg-[#edf5f0] p-4 dark:border-emerald-900 dark:bg-emerald-950/25">
               <p className="text-sm leading-6 text-[#286548] dark:text-emerald-300">
                 Informe o total de notebooks desta categoria. A quantidade
                 disponível será calculada automaticamente considerando os
-                equipamentos em uso.
+                equipamentos em uso e os pedidos pendentes.
               </p>
             </div>
 
@@ -243,17 +259,17 @@ export default function Notebooks() {
               <input
                 id="total-notebooks"
                 type="number"
-                min={editando?.emUso ?? 0}
+                min={(editando?.emUso ?? 0) + (editando?.reservado ?? 0)}
                 step="1"
                 required
                 autoFocus
                 value={total}
                 onChange={(event) => setTotal(event.target.value)}
-                className="w-full rounded-xl border border-[#cbd8d0] bg-white px-4 py-3 text-lg outline-none transition focus:border-[#347b58] focus:ring-4 focus:ring-[#347b58]/10 dark:bg-slate-950 dark:bg-slate-950 dark:text-white"
+                className="w-full rounded-xl border border-[#cbd8d0] bg-white px-4 py-3 text-lg outline-none transition focus:border-[#347b58] focus:ring-4 focus:ring-[#347b58]/10 dark:bg-slate-950 dark:text-white"
               />
 
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Atualmente em uso: {editando?.emUso ?? 0}
+                Em uso: {editando?.emUso ?? 0}. Reservados: {editando?.reservado ?? 0}.
               </p>
             </div>
 

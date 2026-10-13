@@ -1,8 +1,11 @@
+import type { Categoria } from "./pedido";
+
 export interface NotebookCategoria {
   id: number;
-  categoria: "Anos Iniciais" | "Anos Finais";
+  categoria: Categoria;
   total: number;
-  disponiveis: number;
+  disponivel: number;
   emUso: number;
-  manutencao: number;
+  reservado: number;
+  solicitavel: number;
 }

@@ -18,49 +18,7 @@ import {
 
 import AdminLayout from "../../layouts/AdminLayout";
 import { api, mensagemErro } from "../../services/api";
-
-type StatusPedido =
-  | "PENDENTE"
-  | "EM_USO"
-  | "RETIRADA_SOLICITADA"
-  | "FINALIZADO";
-
-interface Pedido {
-  id: number;
-  sala: string;
-  quantidade: number;
-  status: StatusPedido;
-  createdAt: string;
-}
-
-const statusConfig: Record<
-  StatusPedido,
-  {
-    label: string;
-    classes: string;
-  }
-> = {
-  PENDENTE: {
-    label: "Pendente",
-    classes:
-      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300",
-  },
-  EM_USO: {
-    label: "Em uso",
-    classes:
-      "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300",
-  },
-  RETIRADA_SOLICITADA: {
-    label: "Retirada solicitada",
-    classes:
-      "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800/60 dark:bg-orange-950/40 dark:text-orange-300",
-  },
-  FINALIZADO: {
-    label: "Finalizado",
-    classes:
-      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300",
-  },
-};
+import { statusPedidoConfig, type Pedido } from "../../types/pedido";
 
 function formatarData(data: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -78,6 +36,18 @@ export default function MeusPedidos() {
   async function carregar() {
     const { data } = await api.get<Pedido[]>("/pedidos");
     setPedidos(data);
+  }
+
+  async function tentarNovamente() {
+    setCarregando(true);
+    setErro("");
+    try {
+      await carregar();
+    } catch (error) {
+      setErro(mensagemErro(error));
+    } finally {
+      setCarregando(false);
+    }
   }
 
   useEffect(() => {
@@ -113,6 +83,20 @@ export default function MeusPedidos() {
 
     try {
       await api.patch(`/pedidos/${id}/solicitar-retirada`);
+      await carregar();
+    } catch (error) {
+      setErro(mensagemErro(error));
+    } finally {
+      setSolicitando(null);
+    }
+  }
+
+  async function cancelar(id: number) {
+    if (!window.confirm("Cancelar este pedido pendente?")) return;
+    setErro("");
+    setSolicitando(id);
+    try {
+      await api.patch(`/pedidos/${id}/cancelar`);
       await carregar();
     } catch (error) {
       setErro(mensagemErro(error));
@@ -192,7 +176,7 @@ export default function MeusPedidos() {
             className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
           >
             <AlertCircle className="mt-0.5 shrink-0" size={20} />
-            <p>{erro}</p>
+            <p>{erro} <button type="button" onClick={() => void tentarNovamente()} className="font-bold underline">Tentar novamente</button></p>
           </div>
         )}
 
@@ -246,7 +230,7 @@ export default function MeusPedidos() {
 
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                     {pedidos.map((pedido) => {
-                      const status = statusConfig[pedido.status];
+                      const status = statusPedidoConfig[pedido.status];
 
                       return (
                         <tr
@@ -294,13 +278,14 @@ export default function MeusPedidos() {
                               pedido={pedido}
                               solicitando={solicitando}
                               solicitarRetirada={solicitarRetirada}
+                              cancelar={cancelar}
                             />
                           </td>
                         </tr>
                       );
                     })}
 
-                    {!pedidos.length && (
+                    {!erro && !pedidos.length && (
                       <tr>
                         <td colSpan={5} className="px-6 py-14 text-center">
                           <History
@@ -333,7 +318,7 @@ export default function MeusPedidos() {
               {/* Cartões para celular */}
               <div className="divide-y divide-slate-200 md:hidden dark:divide-slate-700">
                 {pedidos.map((pedido) => {
-                  const status = statusConfig[pedido.status];
+                  const status = statusPedidoConfig[pedido.status];
 
                   return (
                     <article key={pedido.id} className="space-y-4 p-5">
@@ -373,13 +358,14 @@ export default function MeusPedidos() {
                         pedido={pedido}
                         solicitando={solicitando}
                         solicitarRetirada={solicitarRetirada}
+                        cancelar={cancelar}
                         mobile
                       />
                     </article>
                   );
                 })}
 
-                {!pedidos.length && (
+                {!erro && !pedidos.length && (
                   <div className="px-6 py-14 text-center">
                     <History
                       className="mx-auto text-slate-400"
@@ -444,6 +430,7 @@ interface AcaoPedidoProps {
   pedido: Pedido;
   solicitando: number | null;
   solicitarRetirada: (id: number) => Promise<void>;
+  cancelar: (id: number) => Promise<void>;
   mobile?: boolean;
 }
 
@@ -451,6 +438,7 @@ function AcaoPedido({
   pedido,
   solicitando,
   solicitarRetirada,
+  cancelar,
   mobile = false,
 }: AcaoPedidoProps) {
   const processando = solicitando === pedido.id;
@@ -488,21 +476,23 @@ function AcaoPedido({
 
   if (pedido.status === "PENDENTE") {
     return (
-      <span
-        className={`inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 ${largura}`}
+      <button
+        type="button"
+        onClick={() => cancelar(pedido.id)}
+        disabled={processando}
+        className={`inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-60 dark:border-slate-600 dark:text-slate-200 ${largura}`}
       >
-        <Clock3 size={17} />
-        Aguardando entrega
-      </span>
+        Cancelar pedido
+      </button>
     );
   }
 
   return (
     <span
-      className={`inline-flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 ${largura}`}
+      className={`inline-flex items-center gap-2 text-sm font-medium ${pedido.status === "CANCELADO" ? "text-slate-500 dark:text-slate-400" : "text-emerald-700 dark:text-emerald-400"} ${largura}`}
     >
-      <CheckCircle2 size={17} />
-      Concluído
+      {pedido.status === "CANCELADO" ? <Clock3 size={17} /> : <CheckCircle2 size={17} />}
+      {pedido.status === "CANCELADO" ? "Cancelado" : "Concluído"}
     </span>
   );
 }

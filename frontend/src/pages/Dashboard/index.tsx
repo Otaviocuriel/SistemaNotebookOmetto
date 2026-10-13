@@ -10,44 +10,53 @@ import { Link } from "react-router-dom";
 import AdminLayout from "../../layouts/AdminLayout";
 import Card from "../../components/ui/Card";
 import { useAuth } from "../../context/AuthContext";
-import { api } from "../../services/api";
-
-interface Estoque {
-  categoria: "INICIAIS" | "FINAIS";
-  disponivel: number;
-}
-
-interface Pedido {
-  status:
-    | "PENDENTE"
-    | "EM_USO"
-    | "RETIRADA_SOLICITADA"
-    | "FINALIZADO";
-}
+import { api, mensagemErro } from "../../services/api";
+import type { NotebookCategoria } from "../../types/notebook";
+import type { Pedido } from "../../types/pedido";
 
 export default function Dashboard() {
   const { usuario } = useAuth();
 
-  const [estoque, setEstoque] = useState<Estoque[]>([]);
+  const [estoque, setEstoque] = useState<NotebookCategoria[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+
+  async function carregar() {
+    setCarregando(true);
+    setErro("");
+    try {
+      const [notebooks, requests] = await Promise.all([
+        api.get<NotebookCategoria[]>("/notebooks"),
+        api.get<Pedido[]>("/pedidos"),
+      ]);
+      setEstoque(notebooks.data);
+      setPedidos(requests.data);
+    } catch (error) {
+      setErro(mensagemErro(error));
+    } finally {
+      setCarregando(false);
+    }
+  }
 
   useEffect(() => {
     Promise.all([
-      api.get<Estoque[]>("/notebooks"),
+      api.get<NotebookCategoria[]>("/notebooks"),
       api.get<Pedido[]>("/pedidos"),
     ])
       .then(([notebooks, requests]) => {
         setEstoque(notebooks.data);
         setPedidos(requests.data);
       })
-      .catch(() => undefined);
+      .catch((error) => setErro(mensagemErro(error)))
+      .finally(() => setCarregando(false));
   }, []);
 
   const iniciais =
-    estoque.find((item) => item.categoria === "INICIAIS")?.disponivel ?? 0;
+    estoque.find((item) => item.categoria === "INICIAIS")?.solicitavel ?? 0;
 
   const finais =
-    estoque.find((item) => item.categoria === "FINAIS")?.disponivel ?? 0;
+    estoque.find((item) => item.categoria === "FINAIS")?.solicitavel ?? 0;
 
   const pendentes = pedidos.filter(
     (pedido) => pedido.status === "PENDENTE"
@@ -91,21 +100,35 @@ export default function Dashboard() {
         <section>
           <div className="mb-4">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Resumo de hoje
+              Resumo geral
             </h2>
 
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Informações atualizadas conforme as entregas e devoluções.
+              Quantidades disponíveis para novos pedidos, considerando as reservas pendentes.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {carregando && (
+            <p role="status" className="text-sm text-slate-500">
+              Carregando indicadores...
+            </p>
+          )}
+          {erro && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+              {erro}{" "}
+              <button type="button" onClick={() => void carregar()} className="font-bold underline">
+                Tentar novamente
+              </button>
+            </div>
+          )}
+          {!carregando && !erro && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Card
               title="Disponíveis — Anos Iniciais"
               value={iniciais}
               icon={<Laptop size={24} />}
               tone="brand"
-              description="Prontos para empréstimo"
+              description="Livres após os pedidos pendentes"
             />
 
             <Card
@@ -113,7 +136,7 @@ export default function Dashboard() {
               value={finais}
               icon={<Laptop size={24} />}
               tone="forest"
-              description="Prontos para empréstimo"
+              description="Livres após os pedidos pendentes"
             />
 
             <Card
@@ -127,7 +150,8 @@ export default function Dashboard() {
                   : "Aguardando confirmação"
               }
             />
-          </div>
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-[#dce5df] bg-white p-5 shadow-[0_5px_18px_rgba(16,45,33,0.04)] dark:border-[#294337] dark:bg-[#101c16] sm:p-6">
@@ -142,8 +166,8 @@ export default function Dashboard() {
               </h2>
 
               <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                As quantidades disponíveis são recalculadas quando um pedido é
-                entregue ou quando os notebooks retornam para o estoque.
+                A disponibilidade para novos pedidos considera as reservas pendentes,
+                as entregas, os cancelamentos e as devoluções.
               </p>
             </div>
           </div>

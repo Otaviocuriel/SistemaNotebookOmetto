@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
+import axios from "axios";
 import {
   AlertCircle,
   Boxes,
@@ -14,15 +15,11 @@ import {
 
 import { api, mensagemErro } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import type { NotebookCategoria } from "../../types/notebook";
 
 interface PedidoFormData {
   sala: string;
   quantidade: number;
-}
-
-interface Estoque {
-  categoria: "INICIAIS" | "FINAIS";
-  disponivel: number;
 }
 
 export default function PedidoForm() {
@@ -44,7 +41,7 @@ export default function PedidoForm() {
     },
   });
 
-  const [estoque, setEstoque] = useState<Estoque | null>(null);
+  const [estoque, setEstoque] = useState<NotebookCategoria | null>(null);
   const [erro, setErro] = useState("");
   const [carregandoEstoque, setCarregandoEstoque] = useState(true);
 
@@ -55,7 +52,7 @@ export default function PedidoForm() {
   let ativo = true;
 
   api
-    .get<Estoque[]>("/notebooks")
+    .get<NotebookCategoria[]>("/notebooks")
     .then(({ data }) => {
       if (!ativo) return;
 
@@ -94,6 +91,14 @@ export default function PedidoForm() {
 
       navigate("/meus-pedidos");
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        try {
+          const { data: notebooks } = await api.get<NotebookCategoria[]>("/notebooks");
+          setEstoque(notebooks.find((item) => item.categoria === usuario?.categoria) ?? null);
+        } catch {
+          // A mensagem da solicitação já informa o problema ao usuário.
+        }
+      }
       setErro(mensagemErro(error));
     }
   }
@@ -124,7 +129,7 @@ export default function PedidoForm() {
       ? "Anos Iniciais"
       : "Anos Finais";
 
-  const disponivel = estoque?.disponivel ?? 0;
+  const disponivel = estoque?.solicitavel ?? 0;
   const quantidadeInvalida =
     quantidade < 1 || quantidade > disponivel;
 
@@ -169,7 +174,7 @@ export default function PedidoForm() {
                 </p>
 
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  disponíveis
+                  para solicitar
                 </p>
               </>
             )}
@@ -185,7 +190,7 @@ export default function PedidoForm() {
                   size={17}
                 />
 
-                Equipamentos disponíveis para solicitação.
+                Equipamentos livres após as reservas de pedidos pendentes.
               </span>
             ) : (
               <span className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
@@ -307,7 +312,7 @@ export default function PedidoForm() {
 
         {!errors.quantidade &&
           estoque &&
-          quantidade > estoque.disponivel && (
+          quantidade > estoque.solicitavel && (
             <p className="mt-2 text-sm text-red-600 dark:text-red-400">
               A quantidade informada é maior que o estoque disponível.
             </p>
