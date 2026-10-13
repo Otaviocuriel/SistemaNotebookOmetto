@@ -41,6 +41,7 @@ Antes, alunos precisavam sair da sala para avisar quantos equipamentos o profess
 - Solicitação de cadastro com aprovação de um administrador.
 - Consulta de notebooks disponíveis por categoria.
 - Novo pedido com sala e quantidade.
+- Reserva dos notebooks enquanto o pedido estiver pendente e cancelamento da solicitação.
 - Acompanhamento do status dos próprios pedidos.
 - Solicitação de retirada após a utilização.
 - Tema claro e escuro.
@@ -49,7 +50,7 @@ Antes, alunos precisavam sair da sala para avisar quantos equipamentos o profess
 
 - Dashboard com indicadores do sistema.
 - Aprovação e rejeição de novos professores.
-- Edição e exclusão de professores.
+- Edição, desativação e reativação de professores sem apagar o histórico de pedidos.
 - Controle de pedidos, entregas e devoluções.
 - Estoque automático de notebooks disponíveis e em uso.
 - Separação entre **Anos Iniciais** e **Anos Finais**.
@@ -111,7 +112,9 @@ Professor envia o pedido
           ↓
 Administrador recebe a solicitação
           ↓
-Notebooks são entregues e o estoque é atualizado
+Notebooks ficam reservados até a entrega
+          ↓
+Administrador entrega e o estoque físico é atualizado
           ↓
 Professor solicita a retirada
           ↓
@@ -155,7 +158,10 @@ cd backend
 npm install
 ```
 
-Copie `.env.example` para `.env` e preencha as variáveis necessárias.
+Copie `.env.example` para `.env` e preencha as variáveis necessárias. No Neon,
+use a URL com `-pooler` em `DATABASE_URL` para a API e a URL direta em
+`DIRECT_URL` para os comandos do Prisma. `JWT_SECRET` deve ter pelo menos
+32 caracteres. Para um banco local, `DIRECT_URL` pode ser omitida.
 
 ```bash
 npm run prisma:generate
@@ -169,6 +175,18 @@ A API estará disponível em:
 ```text
 http://localhost:3333
 ```
+
+Se você perdeu a senha de uma conta de administrador já existente, execute no
+terminal do backend:
+
+```bash
+npm run admin:reset-password
+```
+
+Informe o e-mail da conta e digite a nova senha duas vezes. A senha não aparece
+no terminal e não precisa ser enviada a ninguém. O comando aceita de 10 a 72
+caracteres, com letras e números. `npm run seed` cria administradores ausentes,
+mas não altera a senha de contas existentes.
 
 ### 3. Inicie o frontend
 
@@ -195,7 +213,10 @@ http://localhost:5173
 | `npm run build` | Gera o build de produção |
 | `npm run prisma:generate` | Gera o Prisma Client |
 | `npm run prisma:migrate` | Aplica migrations no banco local |
+| `npm run prisma:deploy` | Aplica migrations pendentes no banco de produção |
 | `npm run seed` | Configura administradores e estoque inicial |
+| `npm run admin:reset-password` | Redefine interativamente a senha de um administrador existente |
+| `npm test` | Verifica regras de disponibilidade e reserva |
 
 ### Frontend
 
@@ -218,6 +239,8 @@ http://localhost:5173
 - ✅ Interface responsiva com tema claro e escuro.
 
 > No plano gratuito, a API pode levar alguns segundos para responder no primeiro acesso após um período sem uso.
+
+Antes de publicar esta versão, execute `npm run prisma:deploy` no ambiente do backend. A migração preserva os pedidos existentes e registra a categoria que cada pedido tinha no momento da atualização. Datas de entrega e devolução anteriores à migração permanecem vazias, pois não estavam armazenadas.
 
 ---
 
