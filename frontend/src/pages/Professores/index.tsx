@@ -18,17 +18,9 @@ import {
 import AdminLayout from "../../layouts/AdminLayout";
 import Modal from "../../components/ui/Modal";
 import { api, mensagemErro } from "../../services/api";
+import type { Professor } from "../../types/professor";
 
-interface ProfessorApi {
-  id: number;
-  categoria: "INICIAIS" | "FINAIS";
-  usuario: {
-    id: number;
-    nome: string;
-    email: string;
-    createdAt: string;
-  };
-}
+type ProfessorApi = Professor;
 
 function nomeCategoria(categoria: ProfessorApi["categoria"]) {
   return categoria === "INICIAIS" ? "Anos Iniciais" : "Anos Finais";
@@ -42,6 +34,7 @@ export default function Professores() {
   const [professores, setProfessores] = useState<ProfessorApi[]>([]);
   const [solicitacoes, setSolicitacoes] = useState<ProfessorApi[]>([]);
   const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(true);
   const [editando, setEditando] = useState<ProfessorApi | null>(null);
   const [excluindo, setExcluindo] = useState<ProfessorApi | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -54,6 +47,7 @@ export default function Professores() {
   });
 
   async function carregar() {
+    setCarregando(true);
     try {
       const [professoresResposta, solicitacoesResposta] = await Promise.all([
         api.get<ProfessorApi[]>("/usuarios/professores"),
@@ -65,19 +59,22 @@ export default function Professores() {
       setErro("");
     } catch (error) {
       setErro(mensagemErro(error));
+    } finally {
+      setCarregando(false);
     }
   }
 
   useEffect(() => {
-    api
-      .get<ProfessorApi[]>("/usuarios/professores")
-      .then(({ data }) => setProfessores(data))
-      .catch((error) => setErro(mensagemErro(error)));
-
-    api
-      .get<ProfessorApi[]>("/usuarios/solicitacoes")
-      .then(({ data }) => setSolicitacoes(data))
-      .catch((error) => setErro(mensagemErro(error)));
+    Promise.all([
+      api.get<ProfessorApi[]>("/usuarios/professores"),
+      api.get<ProfessorApi[]>("/usuarios/solicitacoes"),
+    ])
+      .then(([professoresResposta, solicitacoesResposta]) => {
+        setProfessores(professoresResposta.data);
+        setSolicitacoes(solicitacoesResposta.data);
+      })
+      .catch((error) => setErro(mensagemErro(error)))
+      .finally(() => setCarregando(false));
   }, []);
 
   async function aprovar(professor: ProfessorApi) {
@@ -161,11 +158,27 @@ export default function Professores() {
     }
   }
 
-  const professoresIniciais = professores.filter(
+  async function reativar(professor: ProfessorApi) {
+    setProcessandoId(professor.id);
+    setErro("");
+    try {
+      await api.patch(`/usuarios/professores/${professor.id}/reativar`);
+      await carregar();
+    } catch (error) {
+      setErro(mensagemErro(error));
+    } finally {
+      setProcessandoId(null);
+    }
+  }
+
+  const professoresAtivos = professores.filter(
+    (professor) => professor.usuario.ativo,
+  );
+  const professoresIniciais = professoresAtivos.filter(
     (professor) => professor.categoria === "INICIAIS",
   ).length;
 
-  const professoresFinais = professores.filter(
+  const professoresFinais = professoresAtivos.filter(
     (professor) => professor.categoria === "FINAIS",
   ).length;
 
@@ -189,8 +202,8 @@ export default function Professores() {
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Resumo
-            titulo="Professores aprovados"
-            valor={professores.length}
+            titulo="Professores ativos"
+            valor={professoresAtivos.length}
             icone={<Users size={24} />}
             cor="verde"
           />
@@ -216,9 +229,17 @@ export default function Professores() {
             className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
           >
             <AlertCircle className="mt-0.5 shrink-0" size={20} />
-            <p>{erro}</p>
+            <p>
+              {erro}{" "}
+              {!editando && !excluindo && (
+                <button type="button" onClick={() => void carregar()} className="font-bold underline">
+                  Tentar novamente
+                </button>
+              )}
+            </p>
           </div>
         )}
+        {carregando && <p role="status" className="text-sm text-slate-500">Carregando professores...</p>}
 
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -302,7 +323,7 @@ export default function Professores() {
                 );
               })}
             </div>
-          ) : (
+          ) : !carregando && !erro ? (
             <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <div className="rounded-full bg-emerald-50 p-3 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
                 <Check size={22} />
@@ -318,7 +339,7 @@ export default function Professores() {
                 </p>
               </div>
             </div>
-          )}
+          ) : null}
         </section>
 
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -329,11 +350,11 @@ export default function Professores() {
 
             <div>
               <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-                Professores aprovados
+                Professores cadastrados
               </h2>
 
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Usuários autorizados a solicitar notebooks.
+                Contas ativas e desativadas, com histórico preservado.
               </p>
             </div>
           </div>
@@ -364,7 +385,12 @@ export default function Professores() {
 
                         <div>
                           <p className="font-semibold text-slate-900 dark:text-slate-100">
-                            {professor.usuario.nome}
+                            {professor.usuario.nome}{" "}
+                            {!professor.usuario.ativo && (
+                              <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                                Inativo
+                              </span>
+                            )}
                           </p>
 
                           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -399,23 +425,35 @@ export default function Professores() {
                           Editar
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setErro("");
-                            setExcluindo(professor);
-                          }}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-950/30"
-                        >
-                          <Trash2 size={16} />
-                          Excluir
-                        </button>
+                        {professor.usuario.ativo ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setErro("");
+                              setExcluindo(professor);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-950/30"
+                          >
+                            <Trash2 size={16} />
+                            Desativar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={processandoId === professor.id}
+                            onClick={() => void reativar(professor)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 px-3.5 py-2 text-sm font-semibold text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
+                          >
+                            <UserCheck size={16} />
+                            Reativar
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
 
-                {!professores.length && (
+                {!carregando && !erro && !professores.length && (
                   <tr>
                     <td colSpan={4} className="px-6 py-14 text-center">
                       <Users className="mx-auto text-slate-400" size={36} />
@@ -445,7 +483,7 @@ export default function Professores() {
 
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
-                      {professor.usuario.nome}
+                      {professor.usuario.nome} {!professor.usuario.ativo && "(inativo)"}
                     </p>
 
                     <p className="truncate text-sm text-slate-500 dark:text-slate-400">
@@ -486,22 +524,34 @@ export default function Professores() {
                     Editar
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setErro("");
-                      setExcluindo(professor);
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 font-semibold text-red-600 dark:border-red-900 dark:text-red-400"
-                  >
-                    <Trash2 size={17} />
-                    Excluir
-                  </button>
+                  {professor.usuario.ativo ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setErro("");
+                        setExcluindo(professor);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 font-semibold text-red-600 dark:border-red-900 dark:text-red-400"
+                    >
+                      <Trash2 size={17} />
+                      Desativar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={processandoId === professor.id}
+                      onClick={() => void reativar(professor)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 px-4 py-2.5 font-semibold text-emerald-700 dark:border-emerald-800 dark:text-emerald-300"
+                    >
+                      <UserCheck size={17} />
+                      Reativar
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
 
-            {!professores.length && (
+            {!carregando && !erro && !professores.length && (
               <div className="px-6 py-14 text-center text-slate-500 dark:text-slate-400">
                 Nenhum professor aprovado.
               </div>
@@ -515,6 +565,11 @@ export default function Professores() {
           onClose={() => !salvando && setEditando(null)}
         >
           <form className="space-y-5" onSubmit={salvarEdicao}>
+            {erro && (
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                {erro}
+              </p>
+            )}
             <CampoFormulario label="Nome" htmlFor="professor-nome">
               <input
                 id="professor-nome"
@@ -581,10 +636,15 @@ export default function Professores() {
 
         <Modal
           isOpen={Boolean(excluindo)}
-          title="Excluir professor"
+          title="Desativar professor"
           onClose={() => !salvando && setExcluindo(null)}
         >
           <div className="space-y-5">
+            {erro && (
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                {erro}
+              </p>
+            )}
             <div className="flex gap-4 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
               <div className="h-fit rounded-full bg-red-100 p-2 text-red-600 dark:bg-red-950 dark:text-red-300">
                 <AlertTriangle size={22} />
@@ -592,12 +652,11 @@ export default function Professores() {
 
               <div>
                 <p className="font-semibold text-slate-900 dark:text-slate-100">
-                  Excluir {excluindo?.usuario.nome}?
+                  Desativar {excluindo?.usuario.nome}?
                 </p>
 
                 <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  A conta e os pedidos finalizados desse professor serão
-                  apagados. Esta ação não poderá ser desfeita.
+                  O acesso será bloqueado. Os pedidos e relatórios anteriores serão preservados. Você poderá reativar a conta depois.
                 </p>
               </div>
             </div>
@@ -618,7 +677,7 @@ export default function Professores() {
                 disabled={salvando}
                 className="rounded-xl bg-red-600 px-5 py-2.5 font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
               >
-                {salvando ? "Excluindo..." : "Excluir professor"}
+                {salvando ? "Desativando..." : "Desativar professor"}
               </button>
             </div>
           </div>

@@ -5,7 +5,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  AlertCircle,
   BarChart3,
   CheckCircle2,
   Clock3,
@@ -18,38 +17,40 @@ import {
 
 import AdminLayout from "../../layouts/AdminLayout";
 import { api, mensagemErro } from "../../services/api";
+import type { Pedido } from "../../types/pedido";
+import type { Professor } from "../../types/professor";
 
-type StatusPedido =
-  | "PENDENTE"
-  | "EM_USO"
-  | "RETIRADA_SOLICITADA"
-  | "FINALIZADO";
-
-interface PedidoApi {
-  id: number;
-  quantidade: number;
-  status: StatusPedido;
-  createdAt: string;
-  professor: {
-    categoria: "INICIAIS" | "FINAIS";
-  };
-}
-
-interface ProfessorApi {
-  id: number;
-  categoria: "INICIAIS" | "FINAIS";
-}
+type Periodo = "7" | "30" | "90" | "todos";
 
 export default function Relatorios() {
-  const [pedidos, setPedidos] = useState<PedidoApi[]>([]);
-  const [professores, setProfessores] = useState<ProfessorApi[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [professores, setProfessores] = useState<Professor[]>([]);
+  const [periodo, setPeriodo] = useState<Periodo>("30");
+  const [referencia, setReferencia] = useState(() => Date.now());
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
 
+  async function tentarNovamente() {
+    setCarregando(true);
+    setErro("");
+    try {
+      const [pedidosResposta, professoresResposta] = await Promise.all([
+        api.get<Pedido[]>("/pedidos"),
+        api.get<Professor[]>("/usuarios/professores"),
+      ]);
+      setPedidos(pedidosResposta.data);
+      setProfessores(professoresResposta.data);
+    } catch (error) {
+      setErro(mensagemErro(error));
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   useEffect(() => {
     Promise.all([
-      api.get<PedidoApi[]>("/pedidos"),
-      api.get<ProfessorApi[]>("/usuarios/professores"),
+      api.get<Pedido[]>("/pedidos"),
+      api.get<Professor[]>("/usuarios/professores"),
     ])
       .then(([pedidosResposta, professoresResposta]) => {
         setPedidos(pedidosResposta.data);
@@ -59,34 +60,42 @@ export default function Relatorios() {
       .finally(() => setCarregando(false));
   }, []);
 
+  const pedidosFiltrados = useMemo(() => {
+    if (periodo === "todos") return pedidos;
+    const inicio = referencia - Number(periodo) * 24 * 60 * 60 * 1000;
+    return pedidos.filter((pedido) => new Date(pedido.createdAt).getTime() >= inicio);
+  }, [pedidos, periodo, referencia]);
+
   const dados = useMemo(() => {
-    const quantidadeSolicitada = pedidos.reduce(
+    const pedidosValidos = pedidosFiltrados.filter((pedido) => pedido.status !== "CANCELADO");
+    const quantidadeSolicitada = pedidosValidos.reduce(
       (total, pedido) => total + pedido.quantidade,
       0
     );
 
-    const pendentes = pedidos.filter(
+    const pendentes = pedidosFiltrados.filter(
       (pedido) => pedido.status === "PENDENTE"
     ).length;
 
-    const emUso = pedidos.filter(
+    const emUso = pedidosFiltrados.filter(
       (pedido) => pedido.status === "EM_USO"
     ).length;
 
-    const retiradaSolicitada = pedidos.filter(
+    const retiradaSolicitada = pedidosFiltrados.filter(
       (pedido) => pedido.status === "RETIRADA_SOLICITADA"
     ).length;
 
-    const finalizados = pedidos.filter(
+    const finalizados = pedidosFiltrados.filter(
       (pedido) => pedido.status === "FINALIZADO"
     ).length;
 
-    const iniciais = pedidos.filter(
-      (pedido) => pedido.professor.categoria === "INICIAIS"
+    const cancelados = pedidosFiltrados.length - pedidosValidos.length;
+    const iniciais = pedidosValidos.filter(
+      (pedido) => pedido.categoria === "INICIAIS"
     );
 
-    const finais = pedidos.filter(
-      (pedido) => pedido.professor.categoria === "FINAIS"
+    const finais = pedidosValidos.filter(
+      (pedido) => pedido.categoria === "FINAIS"
     );
 
     const quantidadeIniciais = iniciais.reduce(
@@ -100,9 +109,19 @@ export default function Relatorios() {
     );
 
     const percentualFinalizado =
-      pedidos.length > 0
-        ? Math.round((finalizados / pedidos.length) * 100)
+      pedidosValidos.length > 0
+        ? Math.round((finalizados / pedidosValidos.length) * 100)
         : 0;
+
+    const duracoes = pedidosFiltrados
+      .filter((pedido) => pedido.entregueAt && pedido.finalizadoAt)
+      .map((pedido) =>
+        new Date(pedido.finalizadoAt!).getTime() - new Date(pedido.entregueAt!).getTime()
+      )
+      .filter((duracao) => Number.isFinite(duracao) && duracao >= 0);
+    const mediaMinutos = duracoes.length
+      ? Math.round(duracoes.reduce((total, duracao) => total + duracao, 0) / duracoes.length / 60000)
+      : null;
 
     return {
       quantidadeSolicitada,
@@ -110,13 +129,15 @@ export default function Relatorios() {
       emUso,
       retiradaSolicitada,
       finalizados,
+      cancelados,
       pedidosIniciais: iniciais.length,
       pedidosFinais: finais.length,
       quantidadeIniciais,
       quantidadeFinais,
       percentualFinalizado,
+      mediaMinutos,
     };
-  }, [pedidos]);
+  }, [pedidosFiltrados]);
 
   const maiorQuantidade = Math.max(
     dados.quantidadeIniciais,
@@ -140,6 +161,19 @@ export default function Relatorios() {
     );
   }
 
+  if (erro) {
+    return (
+      <AdminLayout>
+        <div role="alert" className="mx-auto max-w-xl rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+          <p>{erro}</p>
+          <button type="button" onClick={() => void tentarNovamente()} className="mt-4 font-bold underline">
+            Tentar novamente
+          </button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="mx-auto w-full max-w-[1500px] space-y-7">
@@ -157,20 +191,30 @@ export default function Relatorios() {
           </p>
         </section>
 
-        {erro && (
-          <div
-            role="alert"
-            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        <div className="flex flex-wrap items-center gap-3">
+          <label htmlFor="periodo-relatorio" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Período dos pedidos
+          </label>
+          <select
+            id="periodo-relatorio"
+            value={periodo}
+            onChange={(event) => {
+              setPeriodo(event.target.value as Periodo);
+              setReferencia(Date.now());
+            }}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"
           >
-            <AlertCircle className="mt-0.5 shrink-0" size={20} />
-            <p>{erro}</p>
-          </div>
-        )}
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+            <option value="todos">Todo o histórico</option>
+          </select>
+        </div>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <Indicador
             titulo="Pedidos realizados"
-            valor={pedidos.length}
+            valor={pedidosFiltrados.length}
             descricao="Solicitações registradas"
             icone={<BarChart3 size={24} />}
             cor="verde"
@@ -179,15 +223,15 @@ export default function Relatorios() {
           <Indicador
             titulo="Notebooks solicitados"
             valor={dados.quantidadeSolicitada}
-            descricao="Soma de todos os pedidos"
+            descricao="Soma no período selecionado"
             icone={<Laptop size={24} />}
             cor="azul"
           />
 
           <Indicador
-            titulo="Professores"
-            valor={professores.length}
-            descricao="Cadastros aprovados"
+            titulo="Professores ativos"
+            valor={professores.filter((professor) => professor.usuario.ativo).length}
+            descricao="Total atual, independente do período"
             icone={<Users size={24} />}
             cor="dourado"
           />
@@ -198,6 +242,13 @@ export default function Relatorios() {
             descricao={`${dados.finalizados} pedidos concluídos`}
             icone={<CheckCircle2 size={24} />}
             cor="esmeralda"
+          />
+          <Indicador
+            titulo="Tempo médio em uso"
+            valor={dados.mediaMinutos === null ? "—" : `${dados.mediaMinutos} min`}
+            descricao="Pedidos com entrega e devolução registradas"
+            icone={<Clock3 size={24} />}
+            cor="azul"
           />
         </section>
 
@@ -252,7 +303,7 @@ export default function Relatorios() {
                 </h2>
 
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Distribuição por status atual.
+                  Status atual dos pedidos criados no período selecionado.
                 </p>
               </div>
             </div>
@@ -284,6 +335,12 @@ export default function Relatorios() {
                 valor={dados.finalizados}
                 icone={<CheckCircle2 size={19} />}
                 classes="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+              />
+              <LinhaStatus
+                titulo="Cancelados"
+                valor={dados.cancelados}
+                icone={<Clock3 size={19} />}
+                classes="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
               />
             </div>
           </article>

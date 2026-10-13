@@ -1,7 +1,13 @@
+import type { Categoria } from "./pedido";
+
 export interface Professor {
   id: number;
-  nome: string;
-  email: string;
-  categoria: "Anos Iniciais" | "Anos Finais";
-  status: "Ativo" | "Inativo";
+  categoria: Categoria;
+  usuario: {
+    id: number;
+    nome: string;
+    email: string;
+    ativo: boolean;
+    createdAt: string;
+  };
 }
