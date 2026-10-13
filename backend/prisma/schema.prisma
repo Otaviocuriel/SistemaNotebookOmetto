@@ -2,12 +2,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider = "postgresql"
 }
-
-
 
 enum TipoUsuario {
   ADMIN
@@ -19,24 +16,20 @@ enum StatusCadastro {
   APROVADO
 }
 
-
 enum Categoria {
   INICIAIS
   FINAIS
 }
-
 
 enum StatusPedido {
   PENDENTE
   EM_USO
   RETIRADA_SOLICITADA
   FINALIZADO
+  CANCELADO
 }
 
-
-
 model Usuario {
-
   id Int @id @default(autoincrement())
 
   nome String
@@ -48,74 +41,57 @@ model Usuario {
   tipo TipoUsuario
 
   statusCadastro StatusCadastro @default(APROVADO)
-
+  ativo          Boolean        @default(true)
 
   professor Professor?
 
-
   createdAt DateTime @default(now())
-
 }
 
-
-
 model Professor {
-
   id Int @id @default(autoincrement())
-
 
   usuarioId Int @unique
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
-
   categoria Categoria
 
-
   pedidos Pedido[]
-
 }
 
-
-
 model Notebook {
-
   id Int @id @default(autoincrement())
 
-
   categoria Categoria @unique
-
 
   total Int
 
   disponivel Int
 
   emUso Int
-
 }
 
-
-
 model Pedido {
-
   id Int @id @default(autoincrement())
-
 
   professorId Int
 
   professor Professor @relation(fields: [professorId], references: [id])
 
+  categoria Categoria
 
   sala String
 
-
   quantidade Int
-
 
   status StatusPedido @default(PENDENTE)
 
+  createdAt    DateTime  @default(now())
+  entregueAt   DateTime?
+  finalizadoAt DateTime?
+  canceladoAt  DateTime?
 
-  createdAt DateTime @default(now())
-
+  @@index([categoria, status])
+  @@index([createdAt])
 }
-

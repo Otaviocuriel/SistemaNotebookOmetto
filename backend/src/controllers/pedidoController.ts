@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { prisma } from "../utils/prisma.js";
+import { prisma, transacaoSerializavel } from "../utils/prisma.js";
+import { solicitavel } from "../utils/estoque.js";
 import { notificarAdministradores } from "../services/notificacaoEmailService.js";
 
 const novoPedidoSchema = z.object({
@@ -11,24 +12,28 @@ const novoPedidoSchema = z.object({
 export async function criarPedido(req: Request, res: Response) {
   try {
     const { sala, quantidade } = novoPedidoSchema.parse(req.body);
-    const professor = await prisma.professor.findUnique({
-      where: { usuarioId: req.usuario!.id },
-    });
-    if (!professor) {
-      return res.status(403).json({ message: "Apenas professores podem criar pedidos." });
-    }
-
-    const estoque = await prisma.notebook.findUnique({
-      where: { categoria: professor.categoria },
-    });
-    if (!estoque || quantidade > estoque.disponivel) {
-      return res.status(400).json({
-        message: "Quantidade maior que o estoque disponível.",
+    const { pedido, categoria } = await transacaoSerializavel(async (tx) => {
+      const professor = await tx.professor.findUnique({
+        where: { usuarioId: req.usuario!.id },
       });
-    }
+      if (!professor) throw new Error("PROFESSOR_NAO_ENCONTRADO");
+      const estoque = await tx.notebook.findUnique({
+        where: { categoria: professor.categoria },
+      });
+      const reservas = await tx.pedido.aggregate({
+        where: { categoria: professor.categoria, status: "PENDENTE" },
+        _sum: { quantidade: true },
+      });
+      const quantidadeSolicitavel = solicitavel(
+        estoque?.disponivel ?? 0,
+        reservas._sum.quantidade ?? 0
+      );
+      if (quantidade > quantidadeSolicitavel) throw new Error("ESTOQUE_INSUFICIENTE");
 
-    const pedido = await prisma.pedido.create({
-      data: { professorId: professor.id, sala, quantidade },
+      const pedido = await tx.pedido.create({
+        data: { professorId: professor.id, categoria: professor.categoria, sala, quantidade },
+      });
+      return { pedido, categoria: professor.categoria };
     });
 
     await notificarAdministradores({
@@ -37,11 +42,17 @@ export async function criarPedido(req: Request, res: Response) {
       professor: req.usuario!.nome,
       sala: pedido.sala,
       quantidade: pedido.quantidade,
-      categoria: professor.categoria,
+      categoria,
     });
 
     return res.status(201).json(pedido);
   } catch (error) {
+    if (error instanceof Error && error.message === "PROFESSOR_NAO_ENCONTRADO") {
+      return res.status(403).json({ message: "Apenas professores podem criar pedidos." });
+    }
+    if (error instanceof Error && error.message === "ESTOQUE_INSUFICIENTE") {
+      return res.status(409).json({ message: "Não há notebooks suficientes para reservar esse pedido." });
+    }
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         message: "Sala e quantidade válidas são obrigatórias.",
@@ -109,10 +120,14 @@ export async function solicitarRetirada(req: Request, res: Response) {
       });
     }
 
-    const atualizado = await prisma.pedido.update({
-      where: { id },
+    const alterado = await prisma.pedido.updateMany({
+      where: { id, professorId: professor.id, status: "EM_USO" },
       data: { status: "RETIRADA_SOLICITADA" },
     });
+    if (alterado.count !== 1) {
+      return res.status(409).json({ message: "O status do pedido mudou. Atualize a página." });
+    }
+    const atualizado = await prisma.pedido.findUniqueOrThrow({ where: { id } });
 
     await notificarAdministradores({
       tipo: "RETIRADA_SOLICITADA",
@@ -130,6 +145,34 @@ export async function solicitarRetirada(req: Request, res: Response) {
   }
 }
 
+export async function cancelarPedido(req: Request, res: Response) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ message: "Pedido inválido." });
+  }
+
+  const admin = req.usuario!.tipo === "ADMIN";
+  const professor = admin
+    ? null
+    : await prisma.professor.findUnique({ where: { usuarioId: req.usuario!.id } });
+  if (!admin && !professor) {
+    return res.status(403).json({ message: "Acesso não permitido." });
+  }
+
+  const alterado = await prisma.pedido.updateMany({
+    where: {
+      id,
+      status: "PENDENTE",
+      ...(professor ? { professorId: professor.id } : {}),
+    },
+    data: { status: "CANCELADO", canceladoAt: new Date() },
+  });
+  if (alterado.count !== 1) {
+    return res.status(409).json({ message: "O pedido não está pendente ou não pertence a você." });
+  }
+  return res.json(await prisma.pedido.findUniqueOrThrow({ where: { id } }));
+}
+
 async function alterarStatusComEstoque(
   req: Request,
   res: Response,
@@ -141,7 +184,7 @@ async function alterarStatusComEstoque(
   }
 
   try {
-    const resultado = await prisma.$transaction(async (tx) => {
+    const resultado = await transacaoSerializavel(async (tx) => {
       const pedido = await tx.pedido.findUnique({
         where: { id },
         include: { professor: true },
@@ -159,7 +202,7 @@ async function alterarStatusComEstoque(
 
         const estoqueAtualizado = await tx.notebook.updateMany({
           where: {
-            categoria: pedido.professor.categoria,
+            categoria: pedido.categoria,
             disponivel: { gte: pedido.quantidade },
           },
           data: {
@@ -181,7 +224,7 @@ async function alterarStatusComEstoque(
 
         const estoqueAtualizado = await tx.notebook.updateMany({
           where: {
-            categoria: pedido.professor.categoria,
+            categoria: pedido.categoria,
             emUso: { gte: pedido.quantidade },
           },
           data: {
@@ -194,7 +237,12 @@ async function alterarStatusComEstoque(
         }
       }
 
-      return tx.pedido.findUniqueOrThrow({ where: { id } });
+      return tx.pedido.update({
+        where: { id },
+        data: destino === "EM_USO"
+          ? { entregueAt: new Date() }
+          : { finalizadoAt: new Date() },
+      });
     });
     return res.json(resultado);
   } catch (error) {

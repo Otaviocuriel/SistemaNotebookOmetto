@@ -1,0 +1,2 @@
+ALTER TYPE "StatusPedido" ADD VALUE 'CANCELADO';
+ALTER TABLE "Pedido" ADD COLUMN "canceladoAt" TIMESTAMP(3);

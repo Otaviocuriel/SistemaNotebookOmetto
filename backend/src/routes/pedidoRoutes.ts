@@ -5,6 +5,7 @@ import {
   listarPedidos,
   receberPedido,
   solicitarRetirada,
+  cancelarPedido,
 } from "../controllers/pedidoController.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { adminMiddleware } from "../middlewares/adminMiddleware.js";
@@ -14,6 +15,7 @@ router.use(authMiddleware);
 router.get("/", listarPedidos);
 router.post("/", criarPedido);
 router.patch("/:id/solicitar-retirada", solicitarRetirada);
+router.patch("/:id/cancelar", cancelarPedido);
 router.patch("/:id/entregar", adminMiddleware, entregarPedido);
 router.patch("/:id/receber", adminMiddleware, receberPedido);
 export default router;
